@@ -90,6 +90,9 @@ export NODE_ENV="production"
 you have to pick a unique name. The is not currently a configuration mechanism for this so you have to edit the 
 source. TODO: fix that.
 
+## Create a redis database on aws elasticache
+1. Use the aws gui console
+
 ## Create a virtual private cloud
 
 This step is probably already done for a new aws account, but if not the following steps 

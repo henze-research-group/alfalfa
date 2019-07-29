@@ -41,7 +41,7 @@ import pytz
 
 class RunFMUSite:
     def __init__(self, **kwargs):
-        self.s3 = boto3.resource('s3', region_name='us-east-1', endpoint_url=os.environ['S3_URL'])
+        self.s3 = boto3.resource('s3', region_name=os.environ['REGION'], endpoint_url=os.environ['S3_URL'])
         self.redis = redis.Redis(host=os.environ['REDIS_HOST'])
         self.pubsub = self.redis.pubsub()
 
@@ -76,7 +76,7 @@ class RunFMUSite:
             os.makedirs(self.directory)
         
         #download the tar file and tag file
-        self.bucket = self.s3.Bucket('alfalfa')
+        self.bucket = self.s3.Bucket(os.environ['S3_BUCKET'])
         self.bucket.download_file(key, tarpath)
         
         tar = tarfile.open(tarpath)

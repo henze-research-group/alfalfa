@@ -33,6 +33,22 @@
           {
             "name": "S3_URL",
             "value": "https://s3.amazonaws.com"
+          },
+          { 
+            "name": "REDIS_HOST",
+            "value": "alfalfa-redis-001.7x80os.0001.use1.cache.amazonaws.com"
+          },
+          { 
+            "name": "NODE_ENV",
+            "value": "production"
+          },
+          { 
+            "name": "S3_BUCKET",
+            "value": "alfalfa-east"
+          },
+          { 
+            "name": "REGION",
+            "value": "us-east-1"
           }
       ],
       "logConfiguration": {

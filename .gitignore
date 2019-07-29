@@ -33,4 +33,5 @@ fort.6
 *~
 
 # Python
+*.pyc
 

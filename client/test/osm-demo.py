@@ -4,12 +4,11 @@ thispath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(thispath + '/../')
 import boptest
 import time
-from controllers import pid
 
-bop = boptest.Boptest(url='http://localhost')
+bop = boptest.Boptest(url='http://alfalfa-load-balancer-2053266930.us-east-1.elb.amazonaws.com')
 
 osm_files = []
-for _ in range(5):
+for _ in range(45):
     osm_files.append(thispath + '/CBI_EndtoEndTest_20190618_version2.osm')
 
 siteids = bop.submit_many(osm_files)

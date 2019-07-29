@@ -37,6 +37,18 @@
           { 
             "name": "AWS_SECRET_ACCESS_KEY",
             "value": "<%= @AWS_SECRET_ACCESS_KEY %>"
+          },
+          { 
+            "name": "REDIS_HOST",
+            "value": "alfalfa-redis-001.7x80os.0001.use1.cache.amazonaws.com"
+          },
+          { 
+            "name": "S3_BUCKET",
+            "value": "alfalfa-east"
+          },
+          { 
+            "name": "REGION",
+            "value": "us-east-1"
           }
       ],
       "portMappings": [

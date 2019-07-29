@@ -6,7 +6,7 @@ import boptest
 import time
 from controllers import pid
 
-bop = boptest.Boptest(url='http://localhost')
+bop = boptest.Boptest(url='http://alfalfa-load-balancer-2053266930.us-east-1.elb.amazonaws.com')
 
 length = 48*3600
 step = 300

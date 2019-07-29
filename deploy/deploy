@@ -4,7 +4,7 @@ require 'json'
 require 'erb'
 require 'open3'
 
-SERVICES = ['web', 'worker']
+SERVICES = ['web', 'worker', 'admin']
 
 require 'optparse'
 
@@ -51,6 +51,7 @@ subcommands[command].order!
 @WORKER_ROLE_ARN = ENV['WORKER_ROLE_ARN']
 @EXECUTION_ROLE_ARN = ENV['EXECUTION_ROLE_ARN']
 @WORKER_REGISTRY_URI = ENV['WORKER_REGISTRY_URI']
+@ADMIN_REGISTRY_URI = ENV['ADMIN_REGISTRY_URI']
 @WEB_REGISTRY_URI = ENV['WEB_REGISTRY_URI']
 @AWS_ACCESS_KEY_ID = ENV['AWS_ACCESS_KEY_ID']
 @AWS_SECRET_ACCESS_KEY = ENV['AWS_SECRET_ACCESS_KEY']

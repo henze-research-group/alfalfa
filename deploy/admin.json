@@ -1,0 +1,37 @@
+{
+  "networkMode": "awsvpc",
+  "cpu": "256",
+  "memory": "0.5GB",
+  "requiresCompatibilities": [
+      "FARGATE"
+  ], 
+  "family": "admin",
+  "taskRoleArn": "<%= @WORKER_ROLE_ARN%>",
+  "executionRoleArn": "<%= @EXECUTION_ROLE_ARN%>",
+  "containerDefinitions": [
+    {
+      "name": "admin",
+      "image": "<%=@ADMIN_REGISTRY_URI%>:latest",
+      "essential": true,
+      "environment": [
+          {
+              "name": "JOB_QUEUE_URL",
+              "value": "<%= @JOB_QUEUE_URL%>"
+          },
+          { 
+            "name": "REGION",
+            "value": "us-east-1"
+          }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "awslogs-admin",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "alfalfa"
+        }
+      }
+    }
+  ]
+}
+
