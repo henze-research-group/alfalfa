@@ -8,3 +8,4 @@ export WORKER_ROLE_ARN=arn:aws:iam::431265468707:role/Worker-Role
 export EXECUTION_ROLE_ARN=arn:aws:iam::431265468707:role/Execution-Role
 export NODE_ENV="production"
 export AWS_DEFAULT_PROFILE=batman
+export REGION=us-west-1
