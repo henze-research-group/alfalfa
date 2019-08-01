@@ -367,12 +367,14 @@ try:
     # Set next step
     next_t = datetime.datetime.now().timestamp() 
 
-    # only used for external_clock
+    channel = "site#%s:advancer" % site_ref
+    key = "site#%s" % site_ref
+
     advance = False
-    if external_clock:
-        pubsub.subscribe(sp.site_ref)
+    pubsub.subscribe(channel)
      
     recs.update_one({"_id": sp.site_ref}, {"$set": {"rec.simStatus": "s:Starting"}}, False)
+    redis_client.hset(key, 'state', 'Starting')
     real_time_step=0 
 
     while True:
@@ -383,21 +385,23 @@ try:
             message = pubsub.get_message()
             if message:
                 data = message['data']
-                if data == b'advance':
+                if data == b'Advance':
                     advance = True
-                elif data == b'stop':
+                elif data == b'Stop':
                     stop = True
+
+        # TODO: Every so often check the redis database for a stop or advance signal in case we missed a message
             
         # Iterating over timesteps
         if ( ep.is_running and (sp.sim_status == 1) and (not stop) and t >= next_t and (not external_clock) ) or \
            ( (ep.is_running and (sp.sim_status == 1) and (not stop) and bypass_flag) ) or \
            ( ep.is_running and (sp.sim_status == 1) and (not stop) and (not bypass_flag) and external_clock and advance ):
 
-            # Check for "Stopping" here so we don't hit the database as fast as the event loop will run
-            # Instead we only check the database for stopping at each simulation step
-            rec = recs.find_one({"_id": sp.site_ref})
-            if rec and (rec.get("rec",{}).get("simStatus") == "s:Stopping") :
-                stop = True;
+            #### # Check for "Stopping" here so we don't hit the database as fast as the event loop will run
+            #### # Instead we only check the database for stopping at each simulation step
+            #### rec = recs.find_one({"_id": sp.site_ref})
+            #### if rec and (rec.get("rec",{}).get("simStatus") == "s:Stopping") :
+            ####     stop = True;
                 
             if stop == False:
                 # Write user inputs to E+
@@ -413,9 +417,10 @@ try:
 
                 if energyplus_datetime >= sp.startDatetime:  
                     bypass_flag = False  # Stop bypass
-                    redis_client.hset(site_ref, 'control', 'idle')
             
                 if bypass_flag == False:
+                    redis_client.hset(key, 'state', 'Running')
+
                     for output_id in sp.variables.outputIds():
                         output_index = sp.variables.outputIndex(output_id)
                         if output_index == -1:
@@ -431,6 +436,7 @@ try:
                     real_time_step = real_time_step + 1
                     output_time_string = "s:%s" % energyplus_datetime.isoformat()
                     recs.update_one({"_id": sp.site_ref}, {"$set": {"rec.datetime": output_time_string, "rec.step": "n:" + str(real_time_step), "rec.simStatus": "s:Running"}}, False)
+                    redis_client.hset(key, 'time', output_time_string)
     
                     # Advance time
                     next_t = next_t + sp.sim_step_time / sp.time_scale
@@ -443,8 +449,8 @@ try:
 
                 if external_clock and not bypass_flag:
                     advance = False
-                    redis_client.publish(sp.site_ref, 'complete')
-                    redis_client.hset(site_ref, 'control', 'idle')
+                    redis_client.publish(channel, 'Complete')
+                    redis_client.hset(key, 'action', '')
     
         if stop:
             finalize_simulation()

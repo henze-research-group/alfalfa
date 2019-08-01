@@ -560,36 +560,7 @@ class AlfalfaServer extends HServer {
   //////////////////////////////////////////////////////////////////////////
   
   onInvokeAction(rec, action, args, callback) {
-    if ( action == "runSite" ) {
-      this.mrecs.updateOne(
-        { _id: rec.id().val },
-        { $set: { "rec.simStatus": "s:Starting" } }
-      ).then( () => {
-        let body = {"id": rec.id().val, "op": "InvokeAction", "action": action};
-
-        for (var it = args.iterator(); it.hasNext();) {
-          var entry = it.next();
-          var name = entry.getKey();
-          var val = entry.getValue();
-            body[name] = val.val;
-        }
-     
-        var params = {
-         MessageBody: JSON.stringify(body),
-         QueueUrl: process.env.JOB_QUEUE_URL,
-         MessageGroupId: "Alfalfa"
-        };
-
-        sqs.sendMessage(params, function(err, data) {
-          if (err) {
-            console.log(err, err.stack); // an error occurred
-            callback(null, HGridBuilder.dictsToGrid([]));
-          } else {
-            callback(null, HGridBuilder.dictsToGrid([]));
-          }
-        });
-      })
-    } else if ( action == "stopSite" ) {
+    if ( action == "stopSite" ) {
       const siteRef = rec.id().val
       this.mrecs.updateOne(
         { _id: siteRef },

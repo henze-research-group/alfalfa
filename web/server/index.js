@@ -40,12 +40,15 @@ import morgan from 'morgan';
 import { URL } from "url";
 import AWS from 'aws-sdk';
 
+AWS.config.update({region: process.env.REGION});
 var client = new AWS.S3({endpoint: process.env.S3_URL});
 
 const redis = node_redis.createClient({host: process.env.REDIS_HOST});
 const pub = redis.duplicate();
 const sub = redis.duplicate();
 const advancer = new Advancer(redis, pub, sub);
+
+const queue = new AWS.SQS();
 
 MongoClient.connect(process.env.MONGO_URL).then((mongoClient) => {
   var app = express();
@@ -80,7 +83,9 @@ MongoClient.connect(process.env.MONGO_URL).then((mongoClient) => {
         context: {
           ...request,
           db,
-          advancer
+          advancer,
+          redis,
+          queue
         }
       })(request,response)
     }

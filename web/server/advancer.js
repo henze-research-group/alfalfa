@@ -9,11 +9,12 @@ class Advancer {
   // communicate between the webserver and the simulation worker
   //
   // For each request to advance a simulation, communication involves
-  // 1. A redis key of the form ${siteRef}:control which can have the value idle | advance | running
-  //    A request to advance can only be fulfilled if the simulatoin is currently in idle state
-  // 2. A redis notification from the webserver on the channel "siteRef" with message "advance"
-  // 3. A redis notification from the worker on the channel "siteRef" with message "complete", 
+  // 1. A redis key of the form site#${siteRef}::action which can have the values [Advance | Stop]
+  // 2. A request to advance can only be fulfilled if the site#${siteRef}::state key has the value "Running"
+  // 3. A redis notification from the webserver on the channel "site#${siteRef}:advancer" with message "Advance"
+  // 4. A redis notification from the worker on the channel "site#${siteRef}:advancer" with message "Complete", 
   //    signaling that the simulation is done advancing to the simulation
+  // 5. When the step is done site#${siteRef}::action should have no value
   constructor(redis, pub, sub) {
     this.redis = redis;
     this.pub = pub;
@@ -21,7 +22,7 @@ class Advancer {
     this.handlers = {};
 
     this.sub.on('message', (channel, message) => {
-      if (message == 'complete') {
+      if (message == 'Complete') {
         if (this.handlers.hasOwnProperty(channel)) {
           this.handlers[channel](message);
         }
@@ -35,7 +36,8 @@ class Advancer {
       let pending = siteRefs.length;
 
       const advanceSite = (siteref) => {
-        const channel = siteref;
+        const channel = `site#${siteref}:advancer`;
+        const key = `site#${siteref}`;
 
         // Cleanup the resrouces for advance and finalize the promise
         let interval; 
@@ -47,6 +49,7 @@ class Advancer {
           if (pending == 0) {
             resolve(response);
           }
+          delete this.handlers[channel]
         };
 
         const notify = () => {
@@ -55,16 +58,16 @@ class Advancer {
           };
 
           this.sub.subscribe(channel);
-          this.pub.publish(channel, "advance");
+          this.pub.publish(channel, "Advance");
 
           // This is a failsafe if for some reason we miss a notification
           // that the step is complete
-          // Check if the simulation has gone back to idle
+          // Check if the simulation has gone back to Running
           let intervalCounts = 0;
           interval = setInterval(() => {
-            const control = this.redis.hget(siteref, 'control');
-            if (control == 'idle') {
-              // If the control state is idle, then assume the step has been made
+            const action = this.redis.hget(key, 'action');
+            if (action == '') {
+              // If action is empty, then assume the step has been made
               // and reslve the advance promise, this might happen if we miss the notification for some reason
               finalize(true, 'success');
             } else {
@@ -73,20 +76,20 @@ class Advancer {
             if (intervalCounts > 4) {
               finalize(false, 'no simulation reply');
             }
-          }, 500);
+          }, 1000);
         };
 
-        // Put siteref:control key into "advance" state
-        this.redis.watch(siteref, (err) => {
+        // Put action field into "Advance" state
+        this.redis.watch(key, (err) => {
           if (err) throw err;
 
-          this.redis.hget(siteref, 'control', (err, control) => {
+          this.redis.hget(key, 'action', (err, action) => {
             if (err) throw err;
-            // if control not equal idle then abort the request to advance and return to client
-            if (control == 'idle') {
+            // if state is not equal Running then abort the request to advance and return to client
+            if (action == '') {
               // else proceed to advance state, this node has exclusive control over the simulation now
               this.redis.multi()
-                .hset(siteref, "control", "advance")
+                .hset(key, "action", "Advance")
                 .exec((err, results) => {
                   if (err) throw err;
                   notify();

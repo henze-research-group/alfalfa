@@ -73,68 +73,14 @@ function runSimResolver(uploadFilename, uploadID, context) {
   });
 }
 
-function runSiteResolver(args) {
-    //args: {
-    //  siteRef : { type: new GraphQLNonNull(GraphQLString) },
-    //  startDatetime : { type: GraphQLString },
-    //  endDatetime : { type: GraphQLString },
-    //  timescale : { type: GraphQLFloat },
-    //  realtime : { type: GraphQLBoolean },
-    //  externalClock : { type: GraphQLBoolean },
-    //},
-  console.log("args: ", args)
-  return new Promise( (resolve,reject) => {
-    request
-    .post('/api/invokeAction')
-    .set('Accept', 'application/json')
-    .set('Content-Type', 'application/json')
-    .send({
-      "meta": {
-        "ver": "2.0",
-        "id": `r:${args.siteRef}`,
-        "action": "s:runSite"
-      },
-      "cols": [
-        {
-          "name": "timescale"
-        },
-        {
-          "name": "startDatetime"
-        },
-        {
-          "name": "endDatetime"
-        },
-        {
-          "name": "realtime"
-        },
-        {
-          "name": "externalClock"
-        },
-      ],
-      "rows": [
-        {
-          "timescale": `s:${args.timescale}`,
-          "startDatetime": `s:${args.startDatetime}`,
-          "endDatetime": `s:${args.endDatetime}`,
-          "realtime": `s:${args.realtime}`,
-          "externalClock": `s:${args.externalClock}`,
-        }
-      ]
-    })
-    .end((err, res) => {
-      if( err ) {
-        reject(err);
-      } else {
-        resolve(res.body);
-      }
-    })
-  });
-}
+//function runSiteResolver(args, context) {
+//  dbops
+//}
 
 function stopSiteResolver(args) {
-      //args: {
-      //  siteRef : { type: new GraphQLNonNull(GraphQLString) },
-      //},
+  //args: {
+  //  siteRef : { type: new GraphQLNonNull(GraphQLString) },
+  //},
   return new Promise( (resolve,reject) => {
     request
     .post('/api/invokeAction')

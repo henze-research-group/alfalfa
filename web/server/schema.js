@@ -36,6 +36,7 @@ import {
 } from 'graphql';
 
 import resolvers from './resolvers';
+import dbops from './dbops';
 
 var tagType = new GraphQLObjectType({
   name: 'Tag',
@@ -238,8 +239,8 @@ const mutationType = new GraphQLObjectType({
         realtime : { type: GraphQLBoolean },
         externalClock : { type: GraphQLBoolean },
       },
-      resolve: (_,args,request) => {
-        resolvers.runSiteResolver(args);
+      resolve: (_,args,context) => {
+        return dbops.runSite(args, context);
       },
     },
     stopSite: {
