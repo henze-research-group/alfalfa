@@ -560,16 +560,7 @@ class AlfalfaServer extends HServer {
   //////////////////////////////////////////////////////////////////////////
   
   onInvokeAction(rec, action, args, callback) {
-    if ( action == "stopSite" ) {
-      const siteRef = rec.id().val
-      this.mrecs.updateOne(
-        { _id: siteRef },
-        { $set: { "rec.simStatus": "s:Stopping" } }
-      ).then( () => {
-        this.pub.publish(siteRef, "stop");
-      });
-      callback(null,HGrid.EMPTY);
-    } else if ( action == "removeSite" ) {
+    if ( action == "removeSite" ) {
       this.mrecs.deleteMany({site_ref: rec.id().val});
       this.writearrays.deleteMany({siteRef: rec.id().val});
       callback(null,HGrid.EMPTY);

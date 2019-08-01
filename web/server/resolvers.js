@@ -73,46 +73,6 @@ function runSimResolver(uploadFilename, uploadID, context) {
   });
 }
 
-//function runSiteResolver(args, context) {
-//  dbops
-//}
-
-function stopSiteResolver(args) {
-  //args: {
-  //  siteRef : { type: new GraphQLNonNull(GraphQLString) },
-  //},
-  return new Promise( (resolve,reject) => {
-    request
-    .post('/api/invokeAction')
-    .set('Accept', 'application/json')
-    .set('Content-Type', 'application/json')
-    .send({
-      "meta": {
-        "ver": "2.0",
-        "id": `r:${args.siteRef}`,
-        "action": "s:stopSite"
-      },
-      "cols": [
-        {
-          "name": "foo" // because node Haystack craps out if there are no columns
-        },
-      ],
-      "rows": [
-        {
-          "foo": "s:bar",
-        }
-      ]
-    })
-    .end((err, res) => {
-      if( err ) {
-        reject(err);
-      } else {
-        resolve(res.body);
-      }
-    })
-  });
-}
-
 function removeSiteResolver(args) {
       //args: {
       //  siteRef : { type: new GraphQLNonNull(GraphQLString) },
@@ -149,7 +109,7 @@ function removeSiteResolver(args) {
   });
 }
 
-function  simsResolver(user,args,context) {
+function simsResolver(user,args,context) {
   return new Promise( (resolve,reject) => {
       let sims = [];
       const simcollection = context.db.collection('sims');
@@ -267,8 +227,6 @@ module.exports = {
   runSimResolver, 
   addSiteResolver, 
   sitesResolver, 
-  runSiteResolver, 
-  stopSiteResolver, 
   removeSiteResolver, 
   sitePointResolver, 
   simsResolver, 

@@ -36,12 +36,13 @@ class Advancer {
       let pending = siteRefs.length;
 
       const advanceSite = (siteref) => {
-        const channel = `site#${siteref}:advancer`;
+        const channel = `site#${siteref}:notify`;
         const key = `site#${siteref}`;
 
         // Cleanup the resrouces for advance and finalize the promise
         let interval; 
         const finalize = (success, message='') => {
+          delete this.handlers[channel]
           clearInterval(interval);
           this.sub.unsubscribe(channel);
           response[siteref] = { "status": success, "message": message };
@@ -49,7 +50,6 @@ class Advancer {
           if (pending == 0) {
             resolve(response);
           }
-          delete this.handlers[channel]
         };
 
         const notify = () => {
@@ -60,22 +60,19 @@ class Advancer {
           this.sub.subscribe(channel);
           this.pub.publish(channel, "Advance");
 
-          // This is a failsafe if for some reason we miss a notification
-          // that the step is complete
-          // Check if the simulation has gone back to Running
+          // This is a failsafe in case we miss a message that step is complete
+          //  If action is cleared assume, the step is done
           let intervalCounts = 0;
           interval = setInterval(() => {
-            const action = this.redis.hget(key, 'action');
-            if (action == '') {
-              // If action is empty, then assume the step has been made
-              // and reslve the advance promise, this might happen if we miss the notification for some reason
-              finalize(true, 'success');
-            } else {
-              intervalCounts += 1;
-            }
+            this.redis.hget(key, 'action', (err, action) => {
+              if (action == null) {
+                finalize(true, 'success');
+              }
+            });
             if (intervalCounts > 4) {
               finalize(false, 'no simulation reply');
             }
+            intervalCounts = intervalCounts + 1;
           }, 1000);
         };
 
@@ -85,8 +82,8 @@ class Advancer {
 
           this.redis.hget(key, 'action', (err, action) => {
             if (err) throw err;
-            // if state is not equal Running then abort the request to advance and return to client
-            if (action == '') {
+            // If there is an existing action then don't advance
+            if (action == null) {
               // else proceed to advance state, this node has exclusive control over the simulation now
               this.redis.multi()
                 .hset(key, "action", "Advance")

@@ -173,6 +173,10 @@ def finalize_simulation():
     os.remove(tar_name)
     shutil.rmtree(sp.workflow_directory)
 
+    redis_client.hset(rediskey, 'state', 'Stopped')
+    redis_client.hdel(rediskey, 'time')
+    redis_client.hdel(rediskey, 'action')
+
     site = recs.find_one({"_id": sp.site_ref})
     name = site.get("rec",{}).get("dis", "Unknown") if site else "Unknown"
     name = name.replace("s:","")
@@ -222,7 +226,7 @@ if len(sys.argv) == 7:
 
     site_ref = sys.argv[1]
 
-    real_time_flag = (sys.argv[2] == 'true')
+    real_time_flag = (sys.argv[2] == 'True')
 
     time_scale = sys.argv[3]
     if time_scale == 'undefined':
@@ -249,12 +253,13 @@ if len(sys.argv) == 7:
         endDatetime = parse(endDatetime, ignoretz=True)
         endDatetime = endDatetime.replace(second=0, microsecond=0)
 
-    external_clock = (sys.argv[6] == 'true')
+    external_clock = (sys.argv[6] == 'True')
 
     if not real_time_flag:
         if startDatetime >= endDatetime:
             print('End time occurs on or before start time', file=sys.stderr)
             recs.update_one({"_id": site_ref}, {"$set": {"rec.simStatus": "s:Stopped"}}, False)
+            redis_client.hset(key, 'state', 'Stopped')
             sys.exit(1)
 
 else:
@@ -367,28 +372,27 @@ try:
     # Set next step
     next_t = datetime.datetime.now().timestamp() 
 
-    channel = "site#%s:advancer" % site_ref
-    key = "site#%s" % site_ref
+    channel = "site#%s:notify" % site_ref
+    rediskey = "site#%s" % site_ref
 
     advance = False
     pubsub.subscribe(channel)
      
     recs.update_one({"_id": sp.site_ref}, {"$set": {"rec.simStatus": "s:Starting"}}, False)
-    redis_client.hset(key, 'state', 'Starting')
+    redis_client.hset(rediskey, 'state', 'Starting')
     real_time_step=0 
 
     while True:
         stop = False;
         t = datetime.datetime.now().timestamp()
 
-        if external_clock:
-            message = pubsub.get_message()
-            if message:
-                data = message['data']
-                if data == b'Advance':
-                    advance = True
-                elif data == b'Stop':
-                    stop = True
+        message = pubsub.get_message()
+        if message:
+            data = message['data']
+            if data == b'Advance':
+                advance = True
+            elif data == b'Stop':
+                stop = True
 
         # TODO: Every so often check the redis database for a stop or advance signal in case we missed a message
             
@@ -396,61 +400,54 @@ try:
         if ( ep.is_running and (sp.sim_status == 1) and (not stop) and t >= next_t and (not external_clock) ) or \
            ( (ep.is_running and (sp.sim_status == 1) and (not stop) and bypass_flag) ) or \
            ( ep.is_running and (sp.sim_status == 1) and (not stop) and (not bypass_flag) and external_clock and advance ):
-
-            #### # Check for "Stopping" here so we don't hit the database as fast as the event loop will run
-            #### # Instead we only check the database for stopping at each simulation step
-            #### rec = recs.find_one({"_id": sp.site_ref})
-            #### if rec and (rec.get("rec",{}).get("simStatus") == "s:Stopping") :
-            ####     stop = True;
                 
-            if stop == False:
-                # Write user inputs to E+
-                inputs = getInputs(bypass_flag)
-                ep.write(mlep.mlep_encode_real_data(2, 0, (ep.kStep - 1) * ep.deltaT, inputs))
+            # Write user inputs to E+
+            inputs = getInputs(bypass_flag)
+            ep.write(mlep.mlep_encode_real_data(2, 0, (ep.kStep - 1) * ep.deltaT, inputs))
 
-                # Read outputs
-                packet = ep.read()
-                [ep.flag, eptime, outputs] = mlep.mlep_decode_packet(packet)
-                ep.outputs = outputs
-                energyplus_datetime = get_energyplus_datetime(sp.variables, outputs)
-                ep.kStep = ep.kStep + 1
+            # Read outputs
+            packet = ep.read()
+            [ep.flag, eptime, outputs] = mlep.mlep_decode_packet(packet)
+            ep.outputs = outputs
+            energyplus_datetime = get_energyplus_datetime(sp.variables, outputs)
+            ep.kStep = ep.kStep + 1
 
-                if energyplus_datetime >= sp.startDatetime:  
-                    bypass_flag = False  # Stop bypass
+            if energyplus_datetime >= sp.startDatetime:  
+                bypass_flag = False  # Stop bypass
             
-                if bypass_flag == False:
-                    redis_client.hset(key, 'state', 'Running')
+            if bypass_flag == False:
 
-                    for output_id in sp.variables.outputIds():
-                        output_index = sp.variables.outputIndex(output_id)
-                        if output_index == -1:
-                            logger.error('bad output index for: %s' % output_id)
-                        else:
-                            output_value = ep.outputs[output_index]
-                            
-                            # TODO: Make this better with a bulk update
-                            # Also at some point consider removing curVal and related fields after sim ends
-                            recs.update_one({"_id": output_id}, {
-                                "$set": {"rec.curVal": "n:%s" % output_value, "rec.curStatus": "s:ok", "rec.cur": "m:"}}, False)
+                for output_id in sp.variables.outputIds():
+                    output_index = sp.variables.outputIndex(output_id)
+                    if output_index == -1:
+                        logger.error('bad output index for: %s' % output_id)
+                    else:
+                        output_value = ep.outputs[output_index]
+                        
+                        # TODO: Make this better with a bulk update
+                        # Also at some point consider removing curVal and related fields after sim ends
+                        recs.update_one({"_id": output_id}, {
+                            "$set": {"rec.curVal": "n:%s" % output_value, "rec.curStatus": "s:ok", "rec.cur": "m:"}}, False)
     
-                    real_time_step = real_time_step + 1
-                    output_time_string = "s:%s" % energyplus_datetime.isoformat()
-                    recs.update_one({"_id": sp.site_ref}, {"$set": {"rec.datetime": output_time_string, "rec.step": "n:" + str(real_time_step), "rec.simStatus": "s:Running"}}, False)
-                    redis_client.hset(key, 'time', output_time_string)
+                real_time_step = real_time_step + 1
+                output_time_string = "s:%s" % energyplus_datetime.isoformat()
+                recs.update_one({"_id": sp.site_ref}, {"$set": {"rec.datetime": output_time_string, "rec.step": "n:" + str(real_time_step), "rec.simStatus": "s:Running"}}, False)
+                redis_client.hset(rediskey, 'state', 'Running')
+                redis_client.hset(rediskey, 'time', output_time_string)
     
-                    # Advance time
-                    next_t = next_t + sp.sim_step_time / sp.time_scale
+                # Advance time
+                next_t = next_t + sp.sim_step_time / sp.time_scale
 
-                # Check Stop
-                if ( ep.is_running == True and (energyplus_datetime > sp.endDatetime) ) :
-                    stop = True
-                elif ( sp.sim_status == 3 and ep.is_running == True ) :
-                    stop = True
+            # Check Stop
+            if ( ep.is_running == True and (energyplus_datetime > sp.endDatetime) ) :
+                stop = True
+            elif ( sp.sim_status == 3 and ep.is_running == True ) :
+                stop = True
 
-                if external_clock and not bypass_flag:
-                    advance = False
-                    redis_client.publish(channel, 'Complete')
-                    redis_client.hset(key, 'action', '')
+            if external_clock and not bypass_flag:
+                advance = False
+                redis_client.hdel(rediskey, 'action')
+                redis_client.publish(channel, 'Complete')
     
         if stop:
             finalize_simulation()

@@ -14,7 +14,7 @@ The ```{ }``` denotes a name that is a placeholder for a specific key
 # keys
 
 stite#{siteid}::action [Start | Advance | Stop]
-stite#{siteid}::state [Queued | Starting | Running | Stopped]
+stite#{siteid}::state [Submitted | Queued | Starting | Running | Stopping | Stopped]
 stite#{siteid}::cur#{pointid}
 stite#{siteid}::name#{pointid}
 stite#{siteid}::time
@@ -24,6 +24,6 @@ scaling::running-count
 
 # channels
 
-site#{siteid}:advancer
-Possible messages are: [Advance | Complete]
+site#{siteid}:notify
+Possible messages are: [Advance | Complete | Stop]
 

@@ -42,10 +42,10 @@ def process_message(message):
         if op == 'InvokeAction':
             action = message_body.get('action')
             if action == 'runSite':
-                siteRef = message_body.get('id', 'undefined')
+                siteRef = message_body.get('siteRef', 'undefined')
                 startDatetime = message_body.get('startDatetime', 'undefined')
                 endDatetime = message_body.get('endDatetime', 'undefined')
-                realtime = message_body.get('realtime', 'undefined')
+                realtime = str(message_body.get('realtime', 'undefined'))
                 timescale = str(message_body.get('timescale', 'undefined'))
                 externalClock = str(message_body.get('externalClock', 'undefined'))
 
