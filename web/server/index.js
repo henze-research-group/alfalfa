@@ -50,7 +50,7 @@ const advancer = new Advancer(redis, pub, sub);
 
 const queue = new AWS.SQS();
 
-MongoClient.connect(process.env.MONGO_URL).then((mongoClient) => {
+MongoClient.connect(process.env.MONGO_URL, { useNewUrlParser: true }).then((mongoClient) => {
   var app = express();
   
   if( process.env.NODE_ENV == "production" ) {

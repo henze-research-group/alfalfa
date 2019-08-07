@@ -36,7 +36,7 @@ import {
 } from 'graphql';
 
 import resolvers from './resolvers';
-import dbops from './dbops';
+import dbops from './lib/dbops';
 
 var tagType = new GraphQLObjectType({
   name: 'Tag',

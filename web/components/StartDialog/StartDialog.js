@@ -64,7 +64,6 @@ class StartDialog extends React.Component {
   }
 
   componentWillMount = () => {
-    console.log(this.props);
     if ( this.props.type == 'osm' ) {
       this.state.selectedStartTime = moment().format();
       this.state.selectedEndTime = moment().format();
@@ -115,8 +114,6 @@ class StartDialog extends React.Component {
   render = () => {
     const { selectedStartTime, selectedEndTime, selectedStartSeconds, selectedEndSeconds, realtime, timescale, externalClock } = this.state
     const { classes, type } = this.props;
-
-    console.log("startDialogType: ", this.props.type);
 
     let start;
     let stop;

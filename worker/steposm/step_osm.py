@@ -173,16 +173,17 @@ def finalize_simulation():
     os.remove(tar_name)
     shutil.rmtree(sp.workflow_directory)
 
-    redis_client.hset(rediskey, 'state', 'Stopped')
-    redis_client.hdel(rediskey, 'time')
-    redis_client.hdel(rediskey, 'action')
-
     site = recs.find_one({"_id": sp.site_ref})
     name = site.get("rec",{}).get("dis", "Unknown") if site else "Unknown"
     name = name.replace("s:","")
     time = str(datetime.datetime.now(tz=pytz.UTC))
     sims.insert_one({"_id": sim_id, "siteRef": sp.site_ref, "s3Key": s3_key, "name": name, "timeCompleted": time})
-    recs.update_one({"_id": sp.site_ref}, {"$set": {"rec.simStatus": "s:Stopped"}, "$unset": {"rec.datetime": "","rec.step": "" } }, False)
+
+    redis_client.hdel(rediskey, 'state')
+    redis_client.hdel(rediskey, 'time')
+    redis_client.hdel(rediskey, 'step')
+    redis_client.hdel(rediskey, 'action')
+
     recs.update_many({"_id": sp.site_ref, "rec.cur": "m:"}, {"$unset": {"rec.curVal": "", "rec.curErr": ""}, "$set": { "rec.curStatus": "s:disabled" } }, False)
 
 def getInputs(bypass_flag):
@@ -378,7 +379,6 @@ try:
     advance = False
     pubsub.subscribe(channel)
      
-    recs.update_one({"_id": sp.site_ref}, {"$set": {"rec.simStatus": "s:Starting"}}, False)
     redis_client.hset(rediskey, 'state', 'Starting')
     real_time_step=0 
 
@@ -430,10 +430,9 @@ try:
                             "$set": {"rec.curVal": "n:%s" % output_value, "rec.curStatus": "s:ok", "rec.cur": "m:"}}, False)
     
                 real_time_step = real_time_step + 1
-                output_time_string = "s:%s" % energyplus_datetime.isoformat()
-                recs.update_one({"_id": sp.site_ref}, {"$set": {"rec.datetime": output_time_string, "rec.step": "n:" + str(real_time_step), "rec.simStatus": "s:Running"}}, False)
                 redis_client.hset(rediskey, 'state', 'Running')
-                redis_client.hset(rediskey, 'time', output_time_string)
+                redis_client.hset(rediskey, 'time', energyplus_datetime.isoformat())
+                redis_client.hset(rediskey, 'step', str(real_time_step))
     
                 # Advance time
                 next_t = next_t + sp.sim_step_time / sp.time_scale

@@ -1,5 +1,5 @@
 
-# The following is the structure of the redis database
+# Redis Structure
 
 ## These are the conventions used in the documentation 
 
@@ -9,21 +9,46 @@ The ```#``` is a naming convention to separate parts of a key when there is a ty
 The ```[ ]``` denotes options in a set of possible values
 The ```{ }``` denotes a name that is a placeholder for a specific key
 
-## Structure
-
-# keys
+## keys
 
 stite#{siteid}::action [Start | Advance | Stop]
 stite#{siteid}::state [Submitted | Queued | Starting | Running | Stopping | Stopped]
 stite#{siteid}::cur#{pointid}
 stite#{siteid}::name#{pointid}
 stite#{siteid}::time
+stite#{siteid}::step
 
 scaling::queue-size
 scaling::running-count
 
-# channels
+## channels
 
 site#{siteid}:notify
 Possible messages are: [Advance | Complete | Stop]
+
+# Mongo 
+
+recs [
+  {
+    _id,
+    site_ref,
+    rec {
+      id,
+      dis,
+      ...other tags
+    }
+  }
+]
+
+sites [
+  {
+    _id,
+    dis
+    points [
+      {id, dis},
+      ...
+    ]
+  }
+]
+
 

@@ -29,7 +29,9 @@ import fs from 'fs';
 import hs from 'nodehaystack';
 import HDict from 'nodehaystack/HDict';
 import uuid from 'uuid/v1';
-import dbops from './dbops';
+import dbops from './lib/dbops';
+import co from 'co';
+import {promisify} from 'util';
 
 var HBool = hs.HBool,
     HDateTime = hs.HDateTime,
@@ -196,6 +198,7 @@ class AlfalfaServer extends HServer {
 
     this.db = mongodb;
     this.redis = redis;
+    this.hgetallAsync = promisify(this.redis.hgetall).bind(this.redis);
     this.pub = pub;
     this.sub = sub;
     this.writearrays = this.db.collection('writearrays');
@@ -217,6 +220,7 @@ class AlfalfaServer extends HServer {
         console.log(err);
       }
     }
+
     return db.toDict();
   }
   
@@ -279,8 +283,35 @@ class AlfalfaServer extends HServer {
   };
   
   iterator(callback) {
-    let self = this;
+    const self = this;
     this.mrecs.find().toArray().then((array) => {
+      // The purpose of this section is to 
+      // add realtime tags that come from redis
+      // Redis is used for the time varying, high frequency tags
+      return co(function* () {
+        let tasks = [];
+        for (const item of array) {
+          const rec = item.rec;
+          if ('site' in rec) {
+            const siteid = item['_id'];
+            const rediskey = `site#${siteid}`;
+            const p = self.hgetallAsync(rediskey).then((object) => {
+              if (object) {
+                if (object.time) rec['datetime'] = `s:${object.time}`;
+                if (object.step) rec['step'] = `n:${object.step}`;
+                if (object.state) rec['simStatus'] = `s:${object.state}`;
+              }
+              if (! ('simStatus' in rec)) {
+                rec['simStatus'] = 's:Stopped';
+              }
+            });
+            tasks.push(p);
+          }
+        }
+        yield tasks;
+        return Promise.resolve(array);
+      });
+    }).then((array) => {
       let index = 0;
       let length = array.length;
 
@@ -298,6 +329,7 @@ class AlfalfaServer extends HServer {
           return index < length;
         }
       };
+
       callback(null,it);
     }).catch((err) => {
       console.log(err);
@@ -310,60 +342,8 @@ class AlfalfaServer extends HServer {
         }
       };
       callback(null,it);
-      //const a = [];
-      //return a;
     });
-
-    //var index = 0;
-    //var length = docs.length;
-
-    //console.log('boom 2');
-    //return {
-    //  next: function() {
-    //    var dict;
-    //    if (!this.hasNext()) {
-    //      return null;
-    //    }
-    //    dict = this.recToDict(docs[index].rec);
-    //    index++;
-    //    return dict;
-    //  },
-    //  hasNext: function() {
-    //    return index < length;
-    //  }
-    //};
-
-    //callback(null, this._iterator());
   };
-
-  //_iterator() {
-  //  var docs = this.mrecs.find().toArray().then((array) => {
-  //    console.log('boom 1');
-  //    return array;
-  //  }).catch(() => {
-  //    const a = [];
-  //    return a;
-  //  });
-
-  //  var index = 0;
-  //  var length = docs.length;
-
-  //  console.log('boom 2');
-  //  return {
-  //    next: function() {
-  //      var dict;
-  //      if (!this.hasNext()) {
-  //        return null;
-  //      }
-  //      dict = this.recToDict(docs[index].rec);
-  //      index++;
-  //      return dict;
-  //    },
-  //    hasNext: function() {
-  //      return index < length;
-  //    }
-  //  };
-  //};
   
   //////////////////////////////////////////////////////////////////////////
   //Navigation

@@ -27,7 +27,7 @@ import AWS from 'aws-sdk';
 import request from 'superagent';
 import {MongoClient} from 'mongodb';
 import path from 'path';
-import dbops from './dbops';
+import dbops from './lib/dbops';
 
 AWS.config.update({region: process.env.REGION});
 var sqs = new AWS.SQS();
@@ -130,7 +130,7 @@ function simsResolver(user,args,context) {
     });
 };
 
-function  sitesResolver(user,siteRef) {
+function sitesResolver(user,siteRef) {
   let filter = "s:site";
   if( siteRef ) {
     filter = `${filter} and id==@${siteRef}`;
@@ -163,9 +163,13 @@ function  sitesResolver(user,siteRef) {
           let site = {
             name: row.dis.replace(/[a-z]\:/,''),
             siteRef: row.id.replace(/[a-z]\:/,''),
-            simStatus: row.simStatus.replace(/[a-z]\:/,''),
             simType: row.simType.replace(/[a-z]\:/,''),
           };
+          let simStatus = row['simStatus'];
+          if (simStatus) {
+            simStatus = simStatus.replace(/[a-z]\:/,''),
+            site.simStatus = simStatus;
+          }
           let datetime = row['datetime'];
           if( datetime ) {
             datetime = datetime.replace(/[a-z]\:/,'');

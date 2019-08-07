@@ -34,10 +34,13 @@ import time
 from subprocess import call
 import logging
 import common
+from pymongo import MongoClient
 
 (fmu_upload_name, upload_id, directory) = common.precheck_argus(sys.argv)
 
 s3 = boto3.resource('s3', region_name=os.environ['REGION'], endpoint_url=os.environ['S3_URL'])
+mongo_client = MongoClient(os.environ['MONGO_URL'])
+mongodb = mongo_client[os.environ['MONGO_DB_NAME']]
 
 key = "uploads/%s/%s" % (upload_id, fmu_upload_name)
 # fmu files gets uploaded with user defined names, but here we rename
@@ -51,7 +54,7 @@ bucket.download_file(key, fmupath)
 
 call(['python', 'addfmu/create_tags.py', fmupath, fmu_upload_name, jsonpath])
 
-common.upload_site_DB_Cloud( jsonpath, bucket, directory )
+common.upload_site_DB_Cloud( jsonpath, bucket, directory, mongodb )
 
 shutil.rmtree(directory)
 

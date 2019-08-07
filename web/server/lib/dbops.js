@@ -172,16 +172,12 @@ function runSite(args, context) {
 }
 
 function stopSite(args, context) {
+  // TODO: Consider providing a response,
+  // also check if the simulation is running before stopping
   const key = `site#${args.siteRef}`;
   const channel = `site#${args.siteRef}:notify`;
-  const recs = context.db.collection('recs');
-  recs.updateOne(
-    { _id: args.siteRef },
-    { $set: { "rec.simStatus": "s:Stopping" } }
-  ).then( () => {
-    context.redis.hset(key, 'action', 'Stop');
-    context.pub.publish(channel, "Stop");
-  });
+  context.redis.hmset(key, {'state': 'Stopping', 'action': 'Stop'});
+  context.pub.publish(channel, "Stop");
 }
 
 module.exports = { writePoint, getPoint, runSite, stopSite };

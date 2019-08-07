@@ -1,6 +1,6 @@
 import json
 import uuid
-
+import re
 
 #replace_ids.replace_siteid(upload_id, points_jsonpath, mapping_jsonpath)
 def replace_siteid(uploadid, points_jsonpath, mapping_jsonpath):
@@ -62,4 +62,27 @@ def make_ids_unique(uploadid, points_jsonpath, mapping_jsonpath):
     with open(mapping_jsonpath, 'w') as jsonfile:
         json.dump(points, jsonfile)
 
+def add_recs(json_file, site_ref, db):
+    recs = db.recs
+    sites = db.sites
+
+    with open(json_file) as f:
+        items = json.load(f)
+        for item in items:
+            recid = re.sub(r'^r:', '', item['id'])
+            rec = {
+              '_id': recid,
+              'site_ref': site_ref,
+              'rec': item
+            }
+            recs.insert_one(rec)
+
+        # {
+        #   _id,
+        #   dis
+        #   points [
+        #     {id, dis},
+        #     ...
+        #   ]
+        # }
 

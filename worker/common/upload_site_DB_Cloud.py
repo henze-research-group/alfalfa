@@ -31,9 +31,10 @@ import sys
 import os
 from subprocess import call
 import tarfile
+import tagutils
+import common
 
-
-def upload_site_DB_Cloud(jsonpath, bucket, folderpath):
+def upload_site_DB_Cloud(jsonpath, bucket, folderpath, db):
     '''
     Purpose: upload the tagged site to the database and cloud
     Inputs: the S3-bucket
@@ -51,9 +52,9 @@ def upload_site_DB_Cloud(jsonpath, bucket, folderpath):
 
 
     if site_ref:
-        # This adds a new haystack site to the database
-        call(['npm', 'run', 'start', jsonpath, site_ref])
-
+        ## This adds a new haystack site to the database
+        #call(['npm', 'run', 'start', jsonpath, site_ref])
+        common.add_recs(jsonpath, site_ref, db)
        
         # Open the json file and get a site reference
         # Store the results by site ref

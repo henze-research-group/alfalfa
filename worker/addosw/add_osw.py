@@ -36,6 +36,7 @@ import time
 from subprocess import call
 import logging
 import common
+from pymongo import MongoClient
 
 (osw_zip_name, upload_id, directory) = common.precheck_argus(sys.argv)
 
@@ -55,6 +56,8 @@ ch.setFormatter(formatter)
 logger.addHandler(ch)
 
 s3 = boto3.resource('s3', region_name=os.environ['REGION'], endpoint_url=os.environ['S3_URL'])
+mongo_client = MongoClient(os.environ['MONGO_URL'])
+mongodb = mongo_client[os.environ['MONGO_DB_NAME']]
 
 # First download the osw and run the workflow to get an osm file
 key = "uploads/%s/%s" % (upload_id, osw_zip_name)
@@ -101,7 +104,7 @@ call(['openstudio', 'run', '-m', '-w', workflowpath])
 common.make_ids_unique(upload_id, points_jsonpath, mapping_jsonpath)
 common.replace_siteid(upload_id, points_jsonpath, mapping_jsonpath)
 
-common.upload_site_DB_Cloud(points_jsonpath, bucket, directory)
+common.upload_site_DB_Cloud(points_jsonpath, bucket, directory, mongodb)
 
 shutil.rmtree(directory)
 

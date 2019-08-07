@@ -336,7 +336,6 @@ class Haystack < OpenStudio::Ruleset::ModelUserScript
       site_json[:geoState] = create_str(wf.stateProvinceRegion)
       site_json[:geoCountry] = create_str(wf.country)
       site_json[:geoCoord] = "c:#{wf.latitude},#{wf.longitude}"
-      site_json[:simStatus] = "s:Stopped"
       site_json[:simType] = "s:osm"
       haystack_json << site_json
             
