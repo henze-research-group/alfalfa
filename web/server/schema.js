@@ -163,11 +163,11 @@ var userType = new GraphQLObjectType({
       type: new GraphQLList(siteType),
       description: 'The Haystack sites', 
       args: {
-        siteRef: { type: GraphQLString }
+        siteRef: { type: GraphQLString },
+        siteRefs: { type: new GraphQLList(GraphQLString) }
       },
-      resolve: (user,{siteRef},request) => {
-        //return ['site a', 'site b', 'site c']},
-        return resolvers.sitesResolver(user,siteRef);
+      resolve: (user,args,context) => {
+        return resolvers.sitesResolver(args, context);
       }
     },
     sims: {
@@ -224,8 +224,9 @@ const mutationType = new GraphQLObjectType({
         osmName : { type: new GraphQLNonNull(GraphQLString) },
         uploadID : { type: new GraphQLNonNull(GraphQLString) },
       },
-      resolve: (_,args,request) => {
-        resolvers.addSiteResolver(args.osmName,args.uploadID);
+      resolve: (_,args,context) => {
+        console.log('yes it worked');
+        return dbops.addSite(args, context);
       },
     },
     runSite: {

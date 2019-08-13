@@ -108,6 +108,31 @@ function writePoint(id, siteRef, level, val, who, dur, db) {
   });
 }
 
+function addSite(args, context) {
+  //args: {
+  //  osmName : { type: new GraphQLNonNull(GraphQLString) },
+  //  uploadID : { type: new GraphQLNonNull(GraphQLString) },
+  //},
+  const redis = context.redis;
+  const db = context.db;
+  const queue = context.queue;
+
+  var params = {
+   MessageBody: `{"op": "InvokeAction", 
+      "action": "addSite", 
+      "osm_name": "${args.osmName}", 
+      "upload_id": "${args.uploadID}"
+    }`,
+   QueueUrl: process.env.JOB_QUEUE_URL,
+   MessageGroupId: "Alfalfa"
+  };
+  
+  queue.sendMessage(params, (err, data) => {
+    if (err) throw err;
+    redis.eval("redis.call('incr', KEYS[1])", 1, 'scaling:queue-size')
+  });
+}
+
 function runSite(args, context) {
   //args: {
   //  siteRef : { type: new GraphQLNonNull(GraphQLString) },
@@ -130,12 +155,6 @@ function runSite(args, context) {
     };
 
     body = Object.assign(body, args);
-    console.log('body: ', body);
-    //let argkeys = Object.keys(args)
-    //for (let argkey in argkeys) {
-    //  console.log('value: ', args[argkey]);
-    //  body[argkey] = args[argkey];
-    //}
     
     const params = {
      MessageBody: JSON.stringify(body),
@@ -157,12 +176,10 @@ function runSite(args, context) {
       if ((reply == 'Stopped') || (reply == null)) {
         redis.multi()
           .hset(key, 'state', 'Queued')
+          .eval("redis.call('incr', KEYS[1])", 1, 'scaling:queue-size')
           .exec((err, reply) => {
             if (err) throw err;
-
-            if (reply != null) {
-              sendMessage();
-            }
+            sendMessage();
           });
       } else {
         return;
@@ -180,5 +197,5 @@ function stopSite(args, context) {
   context.pub.publish(channel, "Stop");
 }
 
-module.exports = { writePoint, getPoint, runSite, stopSite };
+module.exports = { writePoint, getPoint, runSite, stopSite, addSite };
 

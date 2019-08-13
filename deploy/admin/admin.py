@@ -1,39 +1,37 @@
 import boto3
 import time
 import os
+import redis
 
 sqs = boto3.resource('sqs', region_name=os.environ['REGION'], endpoint_url=os.environ['JOB_QUEUE_URL'])
-queue = sqs.Queue(url=os.environ['JOB_QUEUE_URL'])
 ecsclient = boto3.client('ecs', region_name=os.environ['REGION'])
+redis_client = redis.Redis(host=os.environ['REDIS_HOST'])
 
 while True:
-    # Check for the message_count to be staying the same 
-    # or increasing for three consecutive points in time
-    count = 0
-    attempts = 0
-    while attempts < 3:
-        message_count = int(queue.attributes.get('ApproximateNumberOfMessages'))
-        # Check if the message count is going up
-        if message_count >= count:
-            count = message_count
-            attempts = attempts + 1
-        else:
-            # else the queue is going down so restart the attempts
-            count = 0
-            attempts = 0
-        time.sleep(1)
-
     response = ecsclient.describe_services(cluster='worker_ecs_cluster',services=['worker-service'])['services'][0]
     desiredCount = int(response['desiredCount'])
     runningCount = int(response['runningCount'])
     pendingCount = int(response['pendingCount'])
     minimumCount = 1
+    maximumCount = 200
+    queueSize = 0
+    jobsRunningCount = 0
 
-    if (count > 0):
-        adjustment = runningCount + count
-        if adjustment > minimumCount:
-            ecsclient.update_service(cluster='worker_ecs_cluster',
-                service='worker-service',
-                desiredCount=(adjustment))
-            # cool down period
-            time.sleep(30)
+    if redis_client.exists('scaling:queue-size'):
+        queueSize = int(redis_client.get('scaling:queue-size'))
+    if redis_client.exists('scaling:jobs-running-count'):
+        jobsRunningCount = int(redis_client.get('scaling:jobs-running-count'))
+
+    newDesiredCount = queueSize + jobsRunningCount + minimumCount
+    if newDesiredCount > maximumCount:
+        newDesiredCount = maximumCount
+
+    if newDesiredCount < 0:
+        newDesiredCount = minimumCount
+
+    if newDesiredCount != desiredCount:
+        ecsclient.update_service(cluster='worker_ecs_cluster',
+            service='worker-service',
+            desiredCount=(newDesiredCount))
+
+    time.sleep(30)

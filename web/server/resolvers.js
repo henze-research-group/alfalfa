@@ -130,11 +130,33 @@ function simsResolver(user,args,context) {
     });
 };
 
-function sitesResolver(user,siteRef) {
-  let filter = "s:site";
-  if( siteRef ) {
-    filter = `${filter} and id==@${siteRef}`;
+function sitesResolver(args, context) {
+  let filter = "s:";
+  try {
+    const siteRef = args.siteRef;
+    const siteRefs = args.siteRefs;
+    const user = args.user;
+
+    if (siteRef) {
+      filter = filter + `id==@${siteRef}`;
+    } else if (siteRefs) {
+      const length = siteRefs.length;
+      for (let i = 0; i < length; i++) {
+        const site = siteRefs[i];
+        filter = filter + `id==@${site}`;
+        if (i < (length - 1)) {
+          filter = filter + ' or ';
+        }
+      }
+    }
+  } catch(error) {
+    console.log(error);
   }
+
+  if (filter == "s:") {
+    filter = 's:site';
+  }
+
   return new Promise( (resolve,reject) => {
     let sites = [];
     request

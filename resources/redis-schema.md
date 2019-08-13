@@ -18,8 +18,8 @@ stite#{siteid}::name#{pointid}
 stite#{siteid}::time
 stite#{siteid}::step
 
-scaling::queue-size
-scaling::running-count
+scaling:queue-size
+scaling::jobs-running-count
 
 ## channels
 

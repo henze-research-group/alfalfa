@@ -32,6 +32,7 @@ import subprocess
 import sys
 import logging
 from pymongo import MongoClient
+import redis
 
 # Process Message
 def process_message(message):
@@ -94,6 +95,7 @@ def process_message(message):
 # ======================================================= MAIN ========================================================
 if __name__ == '__main__':
     try:
+        redis_client = redis.Redis(host=os.environ['REDIS_HOST'])
         sqs = boto3.resource('sqs', region_name=os.environ['REGION'], endpoint_url=os.environ['JOB_QUEUE_URL'])
         queue = sqs.Queue(url=os.environ['JOB_QUEUE_URL'])
         s3 = boto3.resource('s3', region_name=os.environ['REGION'])
@@ -125,8 +127,12 @@ if __name__ == '__main__':
             msg = messages[0]
             logger.info('Message Received with payload: %s' % msg.body)
             # Process Message
+            redis_client.eval("redis.call('incr', KEYS[1])", 1, 'scaling:jobs-running-count')
+            redis_client.eval("redis.call('decr', KEYS[1])", 1, 'scaling:queue-size')
             process_message(msg)
+            redis_client.eval("redis.call('decr', KEYS[1])", 1, 'scaling:jobs-running-count')
         else:
+            redis_client.set('scaling:queue-size',0)
             if "AWS_CONTAINER_CREDENTIALS_RELATIVE_URI" in os.environ:
                 ecsclient = boto3.client('ecs', region_name=os.environ['REGION'])
                 response = ecsclient.describe_services(cluster='worker_ecs_cluster',services=['worker-service'])['services'][0]
@@ -136,8 +142,5 @@ if __name__ == '__main__':
                 minimumCount = 1
 
                 if ((runningCount > minimumCount) & (desiredCount > minimumCount)):
-                    ecsclient.update_service(cluster='worker_ecs_cluster',
-                        service='worker-service',
-                        desiredCount=(desiredCount - 1))
                     sys.exit(0)
 

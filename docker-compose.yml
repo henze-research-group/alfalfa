@@ -111,4 +111,5 @@ services:
      - AWS_SECRET_ACCESS_KEY
      - JOB_QUEUE_URL
      - REGION
+     - REDIS_HOST
 

@@ -18,27 +18,39 @@ class Boptest:
          
     def status(self, siteref):
         return status(self.url, siteref)
+         
+    def status_many(self, siterefs):
+        return status_many(self.url, siterefs)
 
     def wait(self, siteref, desired_status):
         return wait(self.url, siteref, desired_status)
 
+    def wait_many(self, siterefs, desired_status):
+        return wait_many(self.url, siterefs, desired_status)
+
     def submit(self, path):
         args = {"url": self.url, "path": path}
-        return submit_one(args)
+        result = submit_one(args)
+        self.wait(result,'Stopped')
 
     def submit_many(self, paths):
         args = []
         for path in paths:
             args.append({"url": self.url, "path": path})
         p = Pool(10)
-        result = p.map(submit_one, args)
+        siteids = p.map(submit_one, args)
         p.close()
         p.join()
-        return result
+        
+        self.wait_many(siteids, 'Stopped')
+
+        return siteids
 
     def start(self, siteid, **kwargs):
         args = {"url": self.url, "siteid": siteid, "kwargs": kwargs}
-        return start_one(args)
+        result = start_one(args)
+        self.wait(url, siteid, "Running")
+        return result
 
     # Start a simulation for model identified by id. The id should corrsespond to 
     # a return value from the submit method
@@ -51,6 +63,7 @@ class Boptest:
         result = p.map(start_one, args)
         p.close()
         p.join()
+        self.wait_many(site_ids, "Running")
         return result
 
     def advance(self, siteids):
@@ -175,12 +188,29 @@ def status(url, siteref):
 
     return status   
 
-def wait(url, siteref, desired_status):
-    sites = []
+def status_many(url, siterefs):
+    status = ''
 
-    attempts = 0;
-    while attempts < 6000:
-        attempts = attempts + 1
+    siterefs = json.dumps(siterefs)
+    query = 'query { viewer { sites(siteRefs: %s) { simStatus } } }' % siterefs
+    payload = {'query': query}
+    for i in range(3):
+        response = requests.post(url + '/graphql', json=payload)
+        if response.status_code == 200:
+            break
+    if response.status_code != 200:
+        print("Could not get status")
+
+    j = json.loads(response.text)
+    sites = j["data"]["viewer"]["sites"]
+    result = []
+    for site in sites:
+        result.append(site["simStatus"])
+
+    return result   
+
+def wait(url, siteref, desired_status):
+    while True:
         current_status = status(url, siteref)
 
         if desired_status:
@@ -188,6 +218,19 @@ def wait(url, siteref, desired_status):
                 break
         elif current_status:
             break
+        time.sleep(2)
+
+def wait_many(url, siterefs, desired_status):
+    while True:
+        currentStatus = status_many(url, siterefs)
+
+        if desired_status:
+            if len(currentStatus) == len(siterefs):
+                if all(status == desired_status for status in currentStatus):
+                    return;
+        else:
+            return;
+
         time.sleep(2)
 
 def submit_one(args):
@@ -232,8 +275,6 @@ def submit_one(args):
     if response.status_code != 200:
         print("Could not addSite")
 
-    wait(url, uid, "Stopped")
-
     return uid
 
 def start_one(args):
@@ -260,8 +301,6 @@ def start_one(args):
         response = requests.post(url + '/graphql', json={'query': mutation})
         if response.status_code == 200:
             break
-
-    wait(url, site_id, "Running")
 
 def stop_one(args):    
     url = args["url"]

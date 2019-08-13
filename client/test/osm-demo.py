@@ -5,10 +5,11 @@ sys.path.append(thispath + '/../')
 import boptest
 import time
 
-bop = boptest.Boptest(url='http://localhost')
+bop = boptest.Boptest(url='http://alfalfastack.net')
+#bop = boptest.Boptest(url='http://localhost')
 
 osm_files = []
-for _ in range(1):
+for _ in range(100):
     osm_files.append(thispath + '/CBI_EndtoEndTest_20190618_version2.osm')
 
 siteids = bop.submit_many(osm_files)
