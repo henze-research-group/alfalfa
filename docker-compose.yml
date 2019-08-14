@@ -74,7 +74,7 @@ services:
      - JOB_QUEUE_URL
      - MONGO_URL
      - MONGO_DB_NAME
-     - LOGLEVEL=INFO
+     - LOGLEVEL
      - NODE_ENV
      - S3_URL
      - REDIS_HOST

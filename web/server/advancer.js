@@ -47,6 +47,9 @@ class Advancer {
           this.sub.unsubscribe(channel);
           response[siteref] = { "status": success, "message": message };
           pending = pending - 1;
+          if (! success) {
+            console.error('Failed to advance site: ', siteref);
+          }
           if (pending == 0) {
             resolve(response);
           }

@@ -68,7 +68,7 @@ def process_message(message):
                 # is misleading because we are also handling FMUs
                 name, ext = os.path.splitext(osm_name)
                 if ext == '.osm':
-                    subprocess.call(['python', 'addosm/add_osm.py', osm_name, upload_id])
+                    subprocess.call(['python3.5', 'addosm/add_osm.py', osm_name, upload_id])
                 elif ext == '.zip':
                     # assume it contains an osw
                     subprocess.call(['python3.5', 'addosw/add_osw.py', osm_name, upload_id])
@@ -94,30 +94,26 @@ def process_message(message):
 
 # ======================================================= MAIN ========================================================
 if __name__ == '__main__':
-    try:
-        redis_client = redis.Redis(host=os.environ['REDIS_HOST'])
-        sqs = boto3.resource('sqs', region_name=os.environ['REGION'], endpoint_url=os.environ['JOB_QUEUE_URL'])
-        queue = sqs.Queue(url=os.environ['JOB_QUEUE_URL'])
-        s3 = boto3.resource('s3', region_name=os.environ['REGION'])
+    redis_client = redis.Redis(host=os.environ['REDIS_HOST'])
+    sqs = boto3.resource('sqs', region_name=os.environ['REGION'], endpoint_url=os.environ['JOB_QUEUE_URL'])
+    queue = sqs.Queue(url=os.environ['JOB_QUEUE_URL'])
+    s3 = boto3.resource('s3', region_name=os.environ['REGION'])
 
-        mongo_client = MongoClient(os.environ['MONGO_URL'])
-        mongodb = mongo_client[os.environ['MONGO_DB_NAME']]
-        recs = mongodb.recs
+    mongo_client = MongoClient(os.environ['MONGO_URL'])
+    mongodb = mongo_client[os.environ['MONGO_DB_NAME']]
+    recs = mongodb.recs
 
-        logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
-        logger = logging.getLogger('worker')
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    logging.basicConfig(level=os.environ.get("LOGLEVEL", "ERROR"))
+    logger = logging.getLogger('worker')
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-        fh = logging.FileHandler('worker.log')
-        fh.setFormatter(formatter)
-        logger.addHandler(fh)
+    fh = logging.FileHandler('worker.log')
+    fh.setFormatter(formatter)
+    logger.addHandler(fh)
 
-        ch = logging.StreamHandler()
-        ch.setFormatter(formatter)
-        logger.addHandler(ch)
-    except:
-        print('Exception while starting up worker', file=sys.stderr)
-        sys.exit(1)
+    ch = logging.StreamHandler()
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
 
     while True:
         # WaitTimeSeconds triggers long polling that will wait for events to enter queue

@@ -27,6 +27,14 @@
             "value": "<%= @MONGO_URL %>"
           },
           {
+            "name": "MONGO_DB_NAME",
+            "value": "alfalfa"
+          },
+          {
+            "name": "MONGO_TLS",
+            "value": "true"
+          },
+          {
             "name": "S3_URL",
             "value": "https://s3.amazonaws.com"
           },

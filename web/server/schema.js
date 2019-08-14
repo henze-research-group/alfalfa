@@ -225,7 +225,6 @@ const mutationType = new GraphQLObjectType({
         uploadID : { type: new GraphQLNonNull(GraphQLString) },
       },
       resolve: (_,args,context) => {
-        console.log('yes it worked');
         return dbops.addSite(args, context);
       },
     },

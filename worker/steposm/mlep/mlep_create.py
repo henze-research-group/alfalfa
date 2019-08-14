@@ -165,7 +165,6 @@ def mlep_create(program_name, arguments, work_dir, timeout, port, host, bcvtb_di
         server_sock.listen(1)
         port = server_sock.getsockname()[1]
         server_address = ('127.0.0.1', port)
-        print('Server started on %s:%s' % server_address)
         # Host name
         host_name = host
     else:
@@ -204,7 +203,6 @@ def mlep_create(program_name, arguments, work_dir, timeout, port, host, bcvtb_di
                 print('Error while writing socket config file: %s', config_file)
 
         fid.close()
-        print('Wrote socket.cfg')
 
     # Start Process
     status = start_process(program_name, arguments, env, work_dir)
@@ -244,8 +242,8 @@ def start_process(program_name, args, env, work_dir):
     if os.name == 'nt':
         completed_process = subprocess.Popen(cmd, stdout=fid_log)
     else:
-        print('Launch EnergyPlus')
-        completed_process = subprocess.Popen(cmd, stdout=fid_log)
+        FNULL = open(os.devnull, 'w')
+        completed_process = subprocess.Popen(cmd, stdout=FNULL, stderr=subprocess.STDOUT)
 
     # Status
     if completed_process is not None:

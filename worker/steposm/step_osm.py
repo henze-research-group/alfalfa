@@ -173,18 +173,13 @@ def finalize_simulation():
     os.remove(tar_name)
     shutil.rmtree(sp.workflow_directory)
 
+    redis_client.delete(rediskey)
+
+    time = str(datetime.datetime.now(tz=pytz.UTC))
     site = recs.find_one({"_id": sp.site_ref})
     name = site.get("rec",{}).get("dis", "Unknown") if site else "Unknown"
     name = name.replace("s:","")
-    time = str(datetime.datetime.now(tz=pytz.UTC))
     sims.insert_one({"_id": sim_id, "siteRef": sp.site_ref, "s3Key": s3_key, "name": name, "timeCompleted": time})
-
-    redis_client.hdel(rediskey, 'state')
-    redis_client.hdel(rediskey, 'time')
-    redis_client.hdel(rediskey, 'step')
-    redis_client.hdel(rediskey, 'action')
-
-    recs.update_many({"_id": sp.site_ref, "rec.cur": "m:"}, {"$unset": {"rec.curVal": "", "rec.curErr": ""}, "$set": { "rec.curStatus": "s:disabled" } }, False)
 
 def getInputs(bypass_flag):
     master_index = sp.variables.inputIndexFromVariableName("MasterEnable")
@@ -193,17 +188,17 @@ def getInputs(bypass_flag):
     else:
         ep.inputs = [0] * ((len(sp.variables.inputIds())) + 1)
         ep.inputs[master_index] = 1
-        write_arrays = mongodb.writearrays
-        for array in write_arrays.find({"siteRef": sp.site_ref}):
-            for val in array.get('val'):
-                if val:
-                    index = sp.variables.inputIndex(array.get('_id'))
-                    if index == -1:
-                        logger.error('bad input index for: %s' % array.get('_id'))
-                    else:
-                        ep.inputs[index] = val
-                        ep.inputs[index + 1] = 1
-                        break
+        #write_arrays = mongodb.writearrays
+        #for array in write_arrays.find({"siteRef": sp.site_ref}):
+        #    for val in array.get('val'):
+        #        if val:
+        #            index = sp.variables.inputIndex(array.get('_id'))
+        #            if index == -1:
+        #                logger.error('bad input index for: %s' % array.get('_id'))
+        #            else:
+        #                ep.inputs[index] = val
+        #                ep.inputs[index + 1] = 1
+        #                break
     # Convert to tuple
     inputs = tuple(ep.inputs)
     return inputs
@@ -223,8 +218,6 @@ redis_client = redis.Redis(host=os.environ['REDIS_HOST'])
 pubsub = redis_client.pubsub()
 
 if len(sys.argv) == 7:
-    print(sys.argv)
-
     site_ref = sys.argv[1]
 
     real_time_flag = (sys.argv[2] == 'True')
@@ -280,7 +273,7 @@ try:
 except:
     sys.exit(1)
 
-logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
+logging.basicConfig(level=os.environ.get("LOGLEVEL", "ERROR"))
 logger = logging.getLogger('simulation')
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
@@ -327,7 +320,8 @@ try:
     
     sp.variables = Variables(variables_path, sp.mapping)
     
-    subprocess.call(['openstudio', 'steposm/translate_osm.rb', osmpath, sp.idf])
+    FNULL = open(os.devnull, 'w')
+    subprocess.call(['openstudio', 'steposm/translate_osm.rb', osmpath, sp.idf], stdout=FNULL, stderr=subprocess.STDOUT)
     shutil.copyfile(variables_path, variables_new_path)
     
     ## Simulation Parameters
@@ -382,6 +376,11 @@ try:
     redis_client.hset(rediskey, 'state', 'Starting')
     real_time_step=0 
 
+    # next_control_check is used to periodically check the 
+    # redis db for a control message
+    control_check_interval = 3
+    next_control_check = next_t + control_check_interval
+
     while True:
         stop = False;
         t = datetime.datetime.now().timestamp()
@@ -389,12 +388,19 @@ try:
         message = pubsub.get_message()
         if message:
             data = message['data']
-            if data == b'Advance':
-                advance = True
-            elif data == b'Stop':
-                stop = True
+            advance = (data == b'Advance')
+            stop = (data == b'Stop')
 
-        # TODO: Every so often check the redis database for a stop or advance signal in case we missed a message
+        # Every so often check the redis database for a stop or advance signal in case we missed a message
+        if next_control_check > t:
+            next_control_check = t + control_check_interval
+            action = redis_client.hget(rediskey, 'action')
+            if action == b'Advance':
+                logger.error('Missed message to advance sim, continuing anyway')
+                advance = True
+            elif action == b'Stop':
+                logger.error('Missed message to stop sim, stopping anyway')
+                stop = True
             
         # Iterating over timesteps
         if ( ep.is_running and (sp.sim_status == 1) and (not stop) and t >= next_t and (not external_clock) ) or \
@@ -417,22 +423,21 @@ try:
             
             if bypass_flag == False:
 
-                for output_id in sp.variables.outputIds():
-                    output_index = sp.variables.outputIndex(output_id)
-                    if output_index == -1:
-                        logger.error('bad output index for: %s' % output_id)
-                    else:
-                        output_value = ep.outputs[output_index]
-                        
-                        # TODO: Make this better with a bulk update
-                        # Also at some point consider removing curVal and related fields after sim ends
-                        recs.update_one({"_id": output_id}, {
-                            "$set": {"rec.curVal": "n:%s" % output_value, "rec.curStatus": "s:ok", "rec.cur": "m:"}}, False)
+                #for output_id in sp.variables.outputIds():
+                #    output_index = sp.variables.outputIndex(output_id)
+                #    if output_index == -1:
+                #        logger.error('bad output index for: %s' % output_id)
+                #    else:
+                #        output_value = ep.outputs[output_index]
+                #        
+                #        # TODO: Make this better with a bulk update
+                #        # Also at some point consider removing curVal and related fields after sim ends
+                #        recs.update_one({"_id": output_id}, {
+                #            "$set": {"rec.curVal": "n:%s" % output_value, "rec.curStatus": "s:ok", "rec.cur": "m:"}}, False)
     
                 real_time_step = real_time_step + 1
-                redis_client.hset(rediskey, 'state', 'Running')
-                redis_client.hset(rediskey, 'time', energyplus_datetime.isoformat())
-                redis_client.hset(rediskey, 'step', str(real_time_step))
+                status = {'state': 'Running','time': energyplus_datetime.isoformat(), 'step': str(real_time_step)}
+                redis_client.hmset(rediskey, status)
     
                 # Advance time
                 next_t = next_t + sp.sim_step_time / sp.time_scale

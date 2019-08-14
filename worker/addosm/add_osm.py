@@ -26,6 +26,7 @@
 from __future__ import print_function
 import sys
 import os
+import subprocess
 import boto3
 import json
 import tarfile
@@ -39,17 +40,17 @@ from pymongo import MongoClient
 (osm_name, upload_id, directory) = common.precheck_argus(sys.argv)
 
 logger = logging.getLogger('addsite')
-logger.setLevel(logging.INFO)
+logger.setLevel(os.environ.get("LOGLEVEL", "ERROR"))
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 log_file = os.path.join(directory,'addsite.log')
 fh = logging.FileHandler(log_file)
-fh.setLevel(logging.INFO)
+fh.setLevel(os.environ.get("LOGLEVEL", "ERROR"))
 fh.setFormatter(formatter)
 logger.addHandler(fh)
 
 ch = logging.StreamHandler()
-ch.setLevel(logging.INFO)
+ch.setLevel(os.environ.get("LOGLEVEL", "ERROR"))
 ch.setFormatter(formatter)
 logger.addHandler(ch)
 
@@ -70,7 +71,8 @@ tar.close()
 bucket = s3.Bucket(os.environ['S3_BUCKET'])
 bucket.download_file(key, seedpath)
 
-call(['openstudio', 'run', '-m', '-w', workflowpath])
+FNULL = open(os.devnull, 'w')
+call(['openstudio', 'run', '-m', '-w', workflowpath], stdout=FNULL, stderr=subprocess.STDOUT)
 
 common.make_ids_unique(upload_id, points_jsonpath, mapping_jsonpath)
 common.replace_siteid(upload_id, points_jsonpath, mapping_jsonpath)

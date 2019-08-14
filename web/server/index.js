@@ -39,6 +39,7 @@ import historyApiFallback from 'connect-history-api-fallback';
 import morgan from 'morgan';
 import { URL } from "url";
 import AWS from 'aws-sdk';
+import caBundle from './rds-combined-ca-bundle.js';
 
 AWS.config.update({region: process.env.REGION});
 var client = new AWS.S3({endpoint: process.env.S3_URL});
@@ -50,7 +51,15 @@ const advancer = new Advancer(redis, pub, sub);
 
 const queue = new AWS.SQS();
 
-MongoClient.connect(process.env.MONGO_URL, { useNewUrlParser: true }).then((mongoClient) => {
+let mongoopts = {
+  useNewUrlParser: true
+};
+if (process.env.MONGO_TLS) {
+  mongoopts['ssl'] = true;
+  mongoopts['sslCA'] = caBundle;
+}
+
+MongoClient.connect(process.env.MONGO_URL, mongoopts).then((mongoClient) => {
   var app = express();
   
   if( process.env.NODE_ENV == "production" ) {

@@ -31,7 +31,6 @@ import sys
 import os
 from subprocess import call
 import tarfile
-import tagutils
 import common
 
 def upload_site_DB_Cloud(jsonpath, bucket, folderpath, db):

@@ -27,6 +27,10 @@
             "value": "alfalfa"
           },
           {
+            "name": "MONGO_TLS",
+            "value": "true"
+          },
+          {
             "name": "LOGLEVEL",
             "value": "ERROR"
           },

@@ -22,7 +22,7 @@ for i in range(30):
     #    rtu_power = bop.outputs(siteid)[u'RTU_Power']
     #    total_rtu_power = total_rtu_power + rtu_power
     #print(total_rtu_power)
-    time.sleep(2)
+    time.sleep(3)
 
 bop.stop_many(siteids)
 
