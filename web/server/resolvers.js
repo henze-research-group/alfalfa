@@ -73,39 +73,25 @@ function runSimResolver(uploadFilename, uploadID, context) {
   });
 }
 
-function removeSiteResolver(args) {
-      //args: {
-      //  siteRef : { type: new GraphQLNonNull(GraphQLString) },
-      //},
+function removeSiteResolver(obj, args, context) {
+  const id = args.id;
+  let ids = args.ids;
+  const models = context.db.collection('models');
+  const recs = context.db.collection('recs');
+  const redis = context.redis;
+
   return new Promise( (resolve,reject) => {
-    request
-    .post('/api/invokeAction')
-    .set('Accept', 'application/json')
-    .set('Content-Type', 'application/json')
-    .send({
-      "meta": {
-        "ver": "2.0",
-        "id": `r:${args.siteRef}`,
-        "action": "s:removeSite"
-      },
-      "cols": [
-        {
-          "name": "foo" // because node Haystack craps out if there are no columns
-        },
-      ],
-      "rows": [
-        {
-          "foo": "s:bar",
-        }
-      ]
-    })
-    .end((err, res) => {
-      if( err ) {
-        reject(err);
-      } else {
-        resolve(res.body);
-      }
-    })
+    if (id && ! ids && (id != "")) {
+      ids = [id];
+    }
+
+    try {
+      const query = {'_id': {$in: ids}};
+      models.deleteMany(query);
+      resolve();
+    } catch (e) {
+      reject(e);
+    }
   });
 }
 
@@ -130,83 +116,102 @@ function simsResolver(user,args,context) {
     });
 };
 
-function sitesResolver(args, context) {
-  let filter = "s:";
-  try {
-    const siteRef = args.siteRef;
-    const siteRefs = args.siteRefs;
-    const user = args.user;
+function modelsResolver(obj, args, context) {
+  const id = args.id;
+  const models = context.db.collection('models');
+  const redis = context.redis;
+  let ids = args.ids;
 
-    if (siteRef) {
-      filter = filter + `id==@${siteRef}`;
-    } else if (siteRefs) {
-      const length = siteRefs.length;
-      for (let i = 0; i < length; i++) {
-        const site = siteRefs[i];
-        filter = filter + `id==@${site}`;
-        if (i < (length - 1)) {
-          filter = filter + ' or ';
-        }
-      }
-    }
-  } catch(error) {
-    console.log(error);
-  }
-
-  if (filter == "s:") {
-    filter = 's:site';
-  }
+  const toModels = (ids) => {
+    return ids.map((id) => {
+      return {'id': id};
+    });
+  };
 
   return new Promise( (resolve,reject) => {
-    let sites = [];
-    request
-    .post('/api/read')
-    .set('Accept', 'application/json')
-    .send({
-      "meta": {
-        "ver": "2.0"
-      },
-      "cols": [
-        {
-          "name": "filter"
+    // Check that the ids given, actually exist
+    // if no id or ids are given then return all models from db
+    let found = [];
+
+    if (id && ! ids && (id != "")) {
+      ids = [id];
+    }
+
+    if (ids) {
+      // If explicit ids are given, then search redis first
+      let multi = redis.multi();
+      for (const theid of ids) {
+        const key = `model#${theid}`;
+        multi.exists(key);
+      }
+      multi.exec((err, cachedModels) => {
+        if (err) { reject(err); return; }
+        for (let i = 0; i < cachedModels.length; i++) {
+          if (cachedModels[i]) {
+            found.push(ids[i]);
+          }
         }
-      ],
-      "rows": [
-        {
-          "filter": filter,
+
+        if (found.length != ids.length) {
+          // if some ids are missing in redis then look in persistent db
+          let missing = []
+          // Identify the ids not in redis
+          for (const theid of ids) {
+            if (found.indexOf(theid) == -1) {
+              missing.push(theid);
+            }
+          }
+          const query = {'_id': {$in: missing}};
+          models.find(query).toArray().then((array) => {
+            for (const model of array) {
+              found.push(model['_id']);
+            }
+            resolve(toModels(found));
+          });
+        } else {
+          resolve(toModels(found));
         }
-      ]
-    })
-    .end((err, res) => {
-      if( err ) {
-        reject(err);
+      });
+    } else {
+      // If no explicit ids were requested then just find all from persisted storage
+      models.find().toArray().then((array) => {
+        for (const model of array) {
+          found.push(model['_id']);
+        }
+        resolve(toModels(found));
+      });
+    }
+  });
+}
+
+function modelInfoResolver(obj, args, context) {
+  const id = obj['id'];
+  const models = context.db.collection('models');
+
+  return new Promise( (resolve,reject) => {
+    models.findOne({'_id': id}).then((model) => {
+      if (model) {
+        const info = {'name': model['name'], 'type': model['type']};
+        resolve(info);
       } else {
-        res.body.rows.map( (row) => {
-          let site = {
-            name: row.dis.replace(/[a-z]\:/,''),
-            siteRef: row.id.replace(/[a-z]\:/,''),
-            simType: row.simType.replace(/[a-z]\:/,''),
-          };
-          let simStatus = row['simStatus'];
-          if (simStatus) {
-            simStatus = simStatus.replace(/[a-z]\:/,''),
-            site.simStatus = simStatus;
-          }
-          let datetime = row['datetime'];
-          if( datetime ) {
-            datetime = datetime.replace(/[a-z]\:/,'');
-            site.datetime = datetime;
-          }
+        resolve(null);
+      }
+    });
+  });
+}
 
-          let step = row['step'];
-          if (step){
-            step=step.replace(/[a-z]\:/, '');
-            site.step=step;
-          }
+function modelSimResolver(obj, args, context) {
+  const id = obj['id'];
+  const redis = context.redis;
+  const key = `model#${id}`;
 
-          sites.push(site);
-        });
-        resolve(sites);
+  return new Promise( (resolve,reject) => {
+    redis.hgetall(key, (err, sim) => {
+      if (err) reject(err);
+      if (sim) {
+        resolve(sim);
+      } else {
+        resolve({'state': 'Stopped'});
       }
     })
   });
@@ -247,16 +252,18 @@ function writePointResolver(context,siteRef, pointName, value, level) {
   }).then( array => {
     return array;
   });
-}
+};
 
 module.exports = { 
   runSimResolver, 
   addSiteResolver, 
-  sitesResolver, 
   removeSiteResolver, 
-  sitePointResolver, 
-  simsResolver, 
   advanceResolver,
-  writePointResolver 
+  sitePointResolver, 
+  writePointResolver,
+  modelsResolver, 
+  modelInfoResolver, 
+  modelSimResolver, 
+  simsResolver, 
 };
 

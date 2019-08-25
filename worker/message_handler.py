@@ -31,7 +31,6 @@ import json
 import subprocess
 import sys
 import logging
-from pymongo import MongoClient
 import redis
 
 # Process Message
@@ -39,6 +38,10 @@ def process_message(message):
     try:
         message_body = json.loads(message.body)
         message.delete()
+        pipe = redis_client.pipeline()
+        pipe.eval("redis.call('decr', KEYS[1])", 1, 'scaling:queue-size')
+        pipe.eval("redis.call('incr', KEYS[1])", 1, 'scaling:jobs-running-count')
+        pipe.execute()
         op = message_body.get('op')
         if op == 'InvokeAction':
             action = message_body.get('action')
@@ -49,13 +52,11 @@ def process_message(message):
                 realtime = str(message_body.get('realtime', 'undefined'))
                 timescale = str(message_body.get('timescale', 'undefined'))
                 externalClock = str(message_body.get('externalClock', 'undefined'))
+                modeltype = str(message_body.get('type', 'undefined'))
 
-                site = recs.find_one({"_id": siteRef})
-                simType = site.get("rec",{}).get("simType", "osm").replace("s:","")
+                logger.info('Start simulation for site_ref: %s, and type: %s' % (siteRef, modeltype))
 
-                logger.info('Start simulation for site_ref: %s, and simType: %s' % (siteRef, simType))
-
-                if simType == 'fmu':
+                if modeltype == 'fmu':
                     subprocess.call(['python', 'stepfmu/step_fmu.py', siteRef, realtime, timescale, startDatetime, endDatetime, externalClock])
                 else:
                     subprocess.call(['python3.5', 'steposm/step_osm.py', siteRef, realtime, timescale, startDatetime, endDatetime, externalClock])
@@ -89,7 +90,9 @@ def process_message(message):
                 else:
                     logger.info('Unsupported file type was uploaded')
 
+            redis_client.eval("redis.call('decr', KEYS[1])", 1, 'scaling:jobs-running-count')
     except Exception as e:
+        redis_client.eval("redis.call('decr', KEYS[1])", 1, 'scaling:jobs-running-count')
         print('Exception while processing message: %s' % e, file=sys.stderr)
 
 # ======================================================= MAIN ========================================================
@@ -98,10 +101,6 @@ if __name__ == '__main__':
     sqs = boto3.resource('sqs', region_name=os.environ['REGION'], endpoint_url=os.environ['JOB_QUEUE_URL'])
     queue = sqs.Queue(url=os.environ['JOB_QUEUE_URL'])
     s3 = boto3.resource('s3', region_name=os.environ['REGION'])
-
-    mongo_client = MongoClient(os.environ['MONGO_URL'])
-    mongodb = mongo_client[os.environ['MONGO_DB_NAME']]
-    recs = mongodb.recs
 
     logging.basicConfig(level=os.environ.get("LOGLEVEL", "ERROR"))
     logger = logging.getLogger('worker')
@@ -123,20 +122,15 @@ if __name__ == '__main__':
             msg = messages[0]
             logger.info('Message Received with payload: %s' % msg.body)
             # Process Message
-            redis_client.eval("redis.call('incr', KEYS[1])", 1, 'scaling:jobs-running-count')
-            redis_client.eval("redis.call('decr', KEYS[1])", 1, 'scaling:queue-size')
             process_message(msg)
-            redis_client.eval("redis.call('decr', KEYS[1])", 1, 'scaling:jobs-running-count')
         else:
             redis_client.set('scaling:queue-size',0)
             if "AWS_CONTAINER_CREDENTIALS_RELATIVE_URI" in os.environ:
-                ecsclient = boto3.client('ecs', region_name=os.environ['REGION'])
-                response = ecsclient.describe_services(cluster='worker_ecs_cluster',services=['worker-service'])['services'][0]
-                desiredCount = int(response['desiredCount'])
-                runningCount = int(response['runningCount'])
-                pendingCount = int(response['pendingCount'])
-                minimumCount = 1
 
-                if ((runningCount > minimumCount) & (desiredCount > minimumCount)):
-                    sys.exit(0)
+                if redis_client.exists('scaling:workers-running-count', 'scaling:workers-desired-count'):
+                    runningCount = int(redis_client.get('scaling:workers-running-count'))
+                    desiredCount = int(redis_client.get('scaling:workers-desired-count'))
+
+                    if (runningCount > desiredCount):
+                        sys.exit(0)
 

@@ -13,20 +13,25 @@ while True:
     runningCount = int(response['runningCount'])
     pendingCount = int(response['pendingCount'])
     minimumCount = 1
-    maximumCount = 200
+    maximumCount = 950
     queueSize = 0
     jobsRunningCount = 0
+
+    redis_client.set('scaling:workers-running-count', runningCount)
+    redis_client.set('scaling:workers-desired-count', desiredCount)
 
     if redis_client.exists('scaling:queue-size'):
         queueSize = int(redis_client.get('scaling:queue-size'))
     if redis_client.exists('scaling:jobs-running-count'):
         jobsRunningCount = int(redis_client.get('scaling:jobs-running-count'))
+    if redis_client.exists('scaling:minimum-count'):
+        minimumCount = int(redis_client.get('scaling:minimum-count'))
 
-    newDesiredCount = queueSize + jobsRunningCount + minimumCount
+    newDesiredCount = queueSize + jobsRunningCount
     if newDesiredCount > maximumCount:
         newDesiredCount = maximumCount
 
-    if newDesiredCount < 0:
+    if newDesiredCount < minimumCount:
         newDesiredCount = minimumCount
 
     if newDesiredCount != desiredCount:
@@ -34,4 +39,4 @@ while True:
             service='worker-service',
             desiredCount=(newDesiredCount))
 
-    time.sleep(30)
+    time.sleep(10)

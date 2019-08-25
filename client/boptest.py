@@ -3,6 +3,7 @@ import requests
 import json
 import os
 import time
+import json
 from requests_toolbelt import MultipartEncoder
 from multiprocessing import Pool
 from functools import partial
@@ -32,6 +33,7 @@ class Boptest:
         args = {"url": self.url, "path": path}
         result = submit_one(args)
         self.wait(result,'Stopped')
+        return result
 
     def submit_many(self, paths):
         args = []
@@ -68,9 +70,11 @@ class Boptest:
 
     def advance(self, siteids):
         ids = ', '.join('"{0}"'.format(s) for s in siteids)
-        mutation = 'mutation { advance(siteRefs: [%s]) }' % (ids)
+        mutation = 'mutation { advance(siteRefs: [%s]) {id step} }' % (ids)
         payload = {'query': mutation}
         response = requests.post(self.url + '/graphql', json=payload )
+        j = json.loads(response.content)
+        return j['data']['advance']
 
     def stop(self, siteid):
         args = {"url": self.url, "siteid": siteid}
@@ -173,41 +177,42 @@ def convert(value):
 def status(url, siteref):
     status = ''
 
-    query = '{ viewer{ sites(siteRef: "%s") { simStatus } } }' % siteref
+    query = '{ viewer{ models(id: "%s") { sim { state } } } }' % siteref
     for i in range(3):
         response = requests.post(url + '/graphql', json={'query': query})
         if response.status_code == 200:
             break
     if response.status_code != 200:
         print("Could not get status")
+        return status;
 
-    j = json.loads(response.text)
-    sites = j["data"]["viewer"]["sites"]
-    if sites: 
-        status = sites[0]["simStatus"]
-
-    return status   
+    try:
+        j = json.loads(response.text)
+        status = j["data"]["viewer"]["models"][0]["sim"]["state"]
+        return status
+    except:
+        return status
 
 def status_many(url, siterefs):
-    status = ''
+    result = []
 
     siterefs = json.dumps(siterefs)
-    query = 'query { viewer { sites(siteRefs: %s) { simStatus } } }' % siterefs
-    payload = {'query': query}
+    query = '{ viewer{ models(ids: %s) { sim { state } } } }' % siterefs
     for i in range(3):
-        response = requests.post(url + '/graphql', json=payload)
+        response = requests.post(url + '/graphql', json={'query': query})
         if response.status_code == 200:
             break
     if response.status_code != 200:
         print("Could not get status")
+        return result
 
     j = json.loads(response.text)
-    sites = j["data"]["viewer"]["sites"]
-    result = []
-    for site in sites:
-        result.append(site["simStatus"])
+    models = j["data"]["viewer"]["models"]
+    if models:
+        for model in models:
+            result.append(model["sim"]["state"])
 
-    return result   
+    return result
 
 def wait(url, siteref, desired_status):
     while True:

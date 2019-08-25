@@ -38,57 +38,30 @@ import {
 import resolvers from './resolvers';
 import dbops from './lib/dbops';
 
-var tagType = new GraphQLObjectType({
-  name: 'Tag',
-  description: 'A Haystack tag',
-  fields: () => ({
-    key: {
-      type: GraphQLString,
-      description: 'The key associated with a Haystack tag'
-    },
-    value: {
-      type: GraphQLString,
-      description: 'The value if any associated with a Haystack tag'
-    }
-  })
-});
-
-var pointType = new GraphQLObjectType({
-  name: 'Point',
-  description: 'A Haystack point',
-  fields: () => ({
-    dis: {
-      type: GraphQLString,
-      description: 'The value of the haystack dis tag'
-    },
-    tags: {
-      type: new GraphQLList(tagType),
-      description: 'A list of the Haystack tags associated with the point'
-    }
-  })
-});
-
-var siteType = new GraphQLObjectType({
-  name: 'Site',
-  description: 'A site corresponding to an osm file upload',
+var modelInfoType = new GraphQLObjectType({
+  name: 'ModelInfo',
+  description: 'Static information about a model',
   fields: () => ({
     name: {
       type: GraphQLString,
-      description: 'The name of the site, corresponding to the haystack siteRef display name'
+      description: 'The name of the model'
     },
-    siteRef: {
-      type: GraphQLString,
-      description: 'A unique identifier, corresponding to the haystack siteRef value'
-    },
-    simStatus: {
-      type: GraphQLString,
-      description: 'The status of the site simulation'
-    },
-    simType: {
+    type: {
       type: GraphQLString,
       description: 'The type of simulation, osm or fmu'
     },
-    datetime: {
+  })
+});
+
+var modelSimType = new GraphQLObjectType({
+  name: 'ModelState',
+  description: 'The realtime information about a simulating model',
+  fields: () => ({
+    state: {
+      type: GraphQLString,
+      description: 'The status of the site simulation'
+    },
+    time: {
       type: GraphQLString,
       description: 'The current simulation time'
     },
@@ -96,16 +69,29 @@ var siteType = new GraphQLObjectType({
       type: GraphQLString,
       description: 'The current simulation step'
     },
+  })
+});
 
-    points: {
-      type: new GraphQLList(pointType),
-      description: 'A list of the Haystack points associated with the site',
-      args: {
-        writable: { type: GraphQLBoolean },
-        cur: { type: GraphQLBoolean }
-      },
-      resolve: (site,args,context) => {
-        return resolvers.sitePointResolver(site.siteRef, args, context);
+var modelType = new GraphQLObjectType({
+  name: 'Model',
+  description: 'A model uploaded by user',
+  fields: () => ({
+    id: {
+      type: GraphQLString,
+      description: 'A unique identifier, corresponding to the haystack siteRef value'
+    },
+    info: {
+      type: modelInfoType,
+      description: 'Static informtion about the model',
+      resolve: (obj,args,context) => {
+        return resolvers.modelInfoResolver(obj, args, context);
+      }
+    },
+    sim: {
+      type: modelSimType,
+      description: 'The realtime state related to a simulating model',
+      resolve: (obj,args,context) => {
+        return resolvers.modelSimResolver(obj, args, context);
       }
     }
   })
@@ -154,25 +140,25 @@ var userType = new GraphQLObjectType({
   name: 'User',
   description: 'A person who uses our app',
   fields: () => ({
-  //  id: globalIdField('User'),
+    //  id: globalIdField('User'),
     username: {
       type: GraphQLString,
       description: 'The username of a person', 
     },
-    sites: {
-      type: new GraphQLList(siteType),
-      description: 'The Haystack sites', 
+    models: {
+      type: new GraphQLList(modelType),
+      description: 'Models that have been submitted by user', 
       args: {
-        siteRef: { type: GraphQLString },
-        siteRefs: { type: new GraphQLList(GraphQLString) }
+        id: { type: GraphQLString },
+        ids: { type: new GraphQLList(GraphQLString) }
       },
-      resolve: (user,args,context) => {
-        return resolvers.sitesResolver(args, context);
+      resolve: (obj,args,context) => {
+        return resolvers.modelsResolver(obj, args, context);
       }
     },
     sims: {
       type: new GraphQLList(simType),
-      description: 'The simulations', 
+      description: 'Completed simulations', 
       args: {
         siteRef: { type: GraphQLString },
         simRef: { type: GraphQLString }
@@ -202,6 +188,20 @@ var queryType = new GraphQLObjectType({
 //  },
 //  resolve: (_,args,request) => {},
 //});
+
+const advanceResponseType = new GraphQLObjectType({
+  name: 'AdvanceRespone',
+  fields: () => ({
+    id: { 
+      type: GraphQLString,
+      description: 'The models unique identifier'
+    },
+    step: {
+      type: GraphQLString,
+      description: 'The current simulation step after advancing'
+    },
+  })
+});
 
 const mutationType = new GraphQLObjectType({
   name: 'Mutations',
@@ -257,15 +257,16 @@ const mutationType = new GraphQLObjectType({
       name: 'removeSite',
       type: GraphQLString,
       args: {
-        siteRef : { type: new GraphQLNonNull(GraphQLString) },
+        id : { type: GraphQLString },
+        ids : { type: new GraphQLList(GraphQLString) }
       },
-      resolve: (_,args,request) => {
-        resolvers.removeSiteResolver(args);
+      resolve: (obj, args, context) => {
+        resolvers.removeSiteResolver(obj, args, context);
       },
     },
     advance: {
       name: 'advance',
-      type: GraphQLString,
+      type: new GraphQLList(advanceResponseType),
       args: {
         siteRefs : { type: new GraphQLList(new GraphQLNonNull(GraphQLString)) }
       },

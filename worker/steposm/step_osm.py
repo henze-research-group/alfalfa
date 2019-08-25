@@ -44,6 +44,7 @@ import uuid
 from dateutil.parser import parse
 import math
 import redis
+import json
 from dateutil import parser
 
 # Replace Date
@@ -159,7 +160,8 @@ def reset(tarinfo):
     return tarinfo
 
 def finalize_simulation():
-    # subprocess.call(['ReadVarsESO'])
+    redis_client.delete(rediskey)
+
     sim_id = str(uuid.uuid4())
     tar_name = "%s.tar.gz" % sim_id
     
@@ -172,8 +174,6 @@ def finalize_simulation():
     
     os.remove(tar_name)
     shutil.rmtree(sp.workflow_directory)
-
-    redis_client.delete(rediskey)
 
     time = str(datetime.datetime.now(tz=pytz.UTC))
     site = recs.find_one({"_id": sp.site_ref})
@@ -310,6 +310,16 @@ sp.workflow_directory = directory
 variables_path = os.path.join(directory, 'workflow/reports/export_bcvtb_report_variables.cfg')
 variables_new_path = os.path.join(directory, 'workflow/run/variables.cfg')
 
+channel = "model#%s:notify" % site_ref
+rediskey = "model#%s" % site_ref
+
+# Make sure the site is in Queued state,
+# if it is in another state (like Running) then return
+if redis_client.exists(rediskey):
+    if redis_client.hget(rediskey, 'state') != b'Queued':
+        logger.error('Attempt to run simulation, %s, that is not in Queued state' % site_ref)
+        sys.exit(0)
+
 try:
     bucket = s3.Bucket(os.environ['S3_BUCKET'])
     bucket.download_file(key, tarpath)
@@ -367,10 +377,6 @@ try:
     # Set next step
     next_t = datetime.datetime.now().timestamp() 
 
-    channel = "site#%s:notify" % site_ref
-    rediskey = "site#%s" % site_ref
-
-    advance = False
     pubsub.subscribe(channel)
      
     redis_client.hset(rediskey, 'state', 'Starting')
@@ -383,24 +389,18 @@ try:
 
     while True:
         stop = False;
+        advance = False;
         t = datetime.datetime.now().timestamp()
 
         message = pubsub.get_message()
-        if message:
-            data = message['data']
-            advance = (data == b'Advance')
-            stop = (data == b'Stop')
-
-        # Every so often check the redis database for a stop or advance signal in case we missed a message
-        if next_control_check > t:
-            next_control_check = t + control_check_interval
-            action = redis_client.hget(rediskey, 'action')
-            if action == b'Advance':
-                logger.error('Missed message to advance sim, continuing anyway')
-                advance = True
-            elif action == b'Stop':
-                logger.error('Missed message to stop sim, stopping anyway')
-                stop = True
+        if message and message['type'] == 'message':
+            j = json.loads(message['data'].decode('utf-8'))
+            if 'notification' in j:
+                notificaiton = j['notification']
+                if notificaiton == 'advance':
+                    advance = True;
+                elif notificaiton == 'stop':
+                    stop = True
             
         # Iterating over timesteps
         if ( ep.is_running and (sp.sim_status == 1) and (not stop) and t >= next_t and (not external_clock) ) or \
@@ -435,11 +435,11 @@ try:
                 #        recs.update_one({"_id": output_id}, {
                 #            "$set": {"rec.curVal": "n:%s" % output_value, "rec.curStatus": "s:ok", "rec.cur": "m:"}}, False)
     
-                real_time_step = real_time_step + 1
                 status = {'state': 'Running','time': energyplus_datetime.isoformat(), 'step': str(real_time_step)}
                 redis_client.hmset(rediskey, status)
     
                 # Advance time
+                real_time_step = real_time_step + 1
                 next_t = next_t + sp.sim_step_time / sp.time_scale
 
             # Check Stop
@@ -448,10 +448,10 @@ try:
             elif ( sp.sim_status == 3 and ep.is_running == True ) :
                 stop = True
 
-            if external_clock and not bypass_flag:
+            if advance:
                 advance = False
-                redis_client.hdel(rediskey, 'action')
-                redis_client.publish(channel, 'Complete')
+                m = {"notification": "done", "step": real_time_step}
+                redis_client.publish(channel, json.dumps(m))
     
         if stop:
             finalize_simulation()

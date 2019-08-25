@@ -146,7 +146,8 @@ function runSite(args, context) {
   const redis = context.redis;
   const db = context.db;
   const queue = context.queue;
-  const key = `site#${args.siteRef}`;
+  const key = `model#${args.siteRef}`;
+  let mrecs = db.collection('recs');
 
   const sendMessage = () => {
     let body = {
@@ -155,15 +156,21 @@ function runSite(args, context) {
     };
 
     body = Object.assign(body, args);
-    
-    const params = {
-     MessageBody: JSON.stringify(body),
-     QueueUrl: process.env.JOB_QUEUE_URL,
-     MessageGroupId: "Alfalfa"
-    };
+    // Lookup type here so that the worker
+    // does not have to open another db connection
+    let models = db.collection('models');
+    return mrecs.findOne({_id: args['siteRef']}).then((model) => {
+      body['type'] = model['type'];
 
-    queue.sendMessage(params, function(err, data) {
-      if (err) throw err;
+      const params = {
+       MessageBody: JSON.stringify(body),
+       QueueUrl: process.env.JOB_QUEUE_URL,
+       MessageGroupId: "Alfalfa"
+      };
+
+      queue.sendMessage(params, function(err, data) {
+        if (err) throw err;
+      });
     });
   };
 
@@ -191,10 +198,11 @@ function runSite(args, context) {
 function stopSite(args, context) {
   // TODO: Consider providing a response,
   // also check if the simulation is running before stopping
-  const key = `site#${args.siteRef}`;
-  const channel = `site#${args.siteRef}:notify`;
-  context.redis.hmset(key, {'state': 'Stopping', 'action': 'Stop'});
-  context.pub.publish(channel, "Stop");
+  const key = `model#${args.siteRef}`;
+  const channel = `model#${args.siteRef}:notify`;
+  context.redis.hset(key, 'state', 'Stopping');
+  const m = {'notification': 'stop'};
+  context.pub.publish(channel, JSON.stringify(m));
 }
 
 module.exports = { writePoint, getPoint, runSite, stopSite, addSite };

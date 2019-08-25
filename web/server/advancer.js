@@ -22,7 +22,8 @@ class Advancer {
     this.handlers = {};
 
     this.sub.on('message', (channel, message) => {
-      if (message == 'Complete') {
+      message = JSON.parse(message) 
+      if (message['notification'] == 'done') {
         if (this.handlers.hasOwnProperty(channel)) {
           this.handlers[channel](message);
         }
@@ -32,77 +33,51 @@ class Advancer {
 
   advance(siteRefs) {
     let promise = new Promise((resolve, reject) => {
-      let response = {};
+      let response = [];
       let pending = siteRefs.length;
 
-      const advanceSite = (siteref) => {
-        const channel = `site#${siteref}:notify`;
-        const key = `site#${siteref}`;
-
-        // Cleanup the resrouces for advance and finalize the promise
-        let interval; 
-        const finalize = (success, message='') => {
-          delete this.handlers[channel]
-          clearInterval(interval);
-          this.sub.unsubscribe(channel);
-          response[siteref] = { "status": success, "message": message };
-          pending = pending - 1;
-          if (! success) {
-            console.error('Failed to advance site: ', siteref);
-          }
-          if (pending == 0) {
-            resolve(response);
-          }
-        };
-
-        const notify = () => {
-          this.handlers[channel] = () => {
-            finalize(true, 'success');
-          };
-
-          this.sub.subscribe(channel);
-          this.pub.publish(channel, "Advance");
-
-          // This is a failsafe in case we miss a message that step is complete
-          //  If action is cleared assume, the step is done
-          let intervalCounts = 0;
-          interval = setInterval(() => {
-            this.redis.hget(key, 'action', (err, action) => {
-              if (action == null) {
-                finalize(true, 'success');
-              }
-            });
-            if (intervalCounts > 4) {
-              finalize(false, 'no simulation reply');
-            }
-            intervalCounts = intervalCounts + 1;
-          }, 1000);
-        };
-
-        // Put action field into "Advance" state
-        this.redis.watch(key, (err) => {
-          if (err) throw err;
-
-          this.redis.hget(key, 'action', (err, action) => {
-            if (err) throw err;
-            // If there is an existing action then don't advance
-            if (action == null) {
-              // else proceed to advance state, this node has exclusive control over the simulation now
-              this.redis.multi()
-                .hset(key, "action", "Advance")
-                .exec((err, results) => {
-                  if (err) throw err;
-                  notify();
-                })
-            } else {
-              finalize(true, 'busy');
-            }
-          });
-        });
+      const finalize = () => {
+        clearTimeout(timeout);
+        this.sub.unsubscribe();
+        resolve(response);
       };
 
-      for (var site of siteRefs) {
-        advanceSite(site);      
+      let timeout = setTimeout(() => {
+        finalize();
+      }, 5000);
+
+      let siteinfo = [];
+      for (var siteref of siteRefs) {
+        siteinfo.push({
+          'siteref': siteref,
+          'key': `model#${siteref}`,
+          'channel': `model#${siteref}:notify`
+        });
+      }
+      const channels = siteinfo.map((site) => {return site['channel']});
+
+      for (let site of siteinfo) {
+        const channel = site['channel'];
+        const siteref = site['siteref'];
+        this.handlers[channel] = (message) => {
+          delete this.handlers[channel];
+          this.sub.unsubscribe(channel);
+          let notification, r;
+          ({notification, ...r} = message);
+          r['id'] = site['siteref'];
+          response.push(r);
+          pending = pending - 1;
+          if (pending == 0) {
+            finalize();
+          }
+        };
+      }
+
+      this.sub.subscribe(channels);
+
+      for (let site of siteinfo) {
+        const s = JSON.stringify({"notification": "advance"});
+        this.pub.publish(site['channel'],s);
       }
     });
 

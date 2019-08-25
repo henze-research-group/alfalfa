@@ -62,9 +62,32 @@ def make_ids_unique(uploadid, points_jsonpath, mapping_jsonpath):
     with open(mapping_jsonpath, 'w') as jsonfile:
         json.dump(points, jsonfile)
 
+#models [
+#  {
+#    _id,
+#    name,
+#    type,
+#    inputs [
+#      {id, dis},
+#      ...
+#    ],
+#    outputs [
+#      {id, dis},
+#      ...
+#    ]
+#  }
+#]
+
 def add_recs(json_file, site_ref, db):
     recs = db.recs
-    sites = db.sites
+    models = db.models
+
+    inputs = []
+    outputs = []
+
+    model = {}
+    model['_id'] = site_ref
+    model['type'] = 'osm'
 
     with open(json_file) as f:
         items = json.load(f)
@@ -77,12 +100,22 @@ def add_recs(json_file, site_ref, db):
             }
             recs.insert_one(rec)
 
-        # {
-        #   _id,
-        #   dis
-        #   points [
-        #     {id, dis},
-        #     ...
-        #   ]
-        # }
+            if 'site' in item:
+                model['name'] = re.sub(r'^s:', '', item['dis'])
+
+            if all (key in item for key in ("point","sensor")):
+                output = {}
+                output['id'] = recid
+                output['name'] = re.sub(r'^s:', '', item['dis'])
+                outputs.append(output)
+
+            if all (key in item for key in ("point","writable")):
+                inp = {}
+                inp['id'] = recid
+                inp['name'] = re.sub(r'^s:', '', item['dis'])
+                inputs.append(inp)
+
+    model['inputs'] = inputs
+    model['outputs'] = outputs
+    models.insert_one(model)
 
