@@ -107,40 +107,19 @@ class Haystack < OpenStudio::Ruleset::ModelUserScript
 
     #Site and WeatherFile Data
     if model.weatherFile.is_initialized
-      site_json = Hash.new
-      weather_json = Hash.new
-      floor_json = Hash.new
 
       wf = model.weatherFile.get
       building = model.getBuilding
+      simCon = model.getSimulationControl
 
-      site_json[:id] = tagger.create_ref(building.handle)
-      site_json[:dis] = tagger.create_str(building.name.to_s)
-      site_json[:site] = "m:"
-      site_json[:area] = tagger.create_num(building.floorArea)
-      site_json[:weatherRef] = tagger.create_ref(wf.handle)
-      site_json[:tz] = tagger.create_num(wf.timeZone)
-      site_json[:geoCity] = tagger.create_str(wf.city)
-      site_json[:geoState] = tagger.create_str(wf.stateProvinceRegion)
-      site_json[:geoCountry] = tagger.create_str(wf.country)
-      site_json[:geoCoord] = "c:#{wf.latitude},#{wf.longitude}"
-      site_json[:simStatus] = "s:Stopped"
-      site_json[:simType] = "s:osm"
-      haystack_json << site_json
+      #Define the site, weather, and floor for haystack represetnation
+      site = tagger.tag_site(building.handle, building.name, building.floorArea,
+                                wf.handle, wf.timeZone, wf.city, wf.stateProvinceRegion, wf.country, wf.latitude, wf.longitude)
 
-      weather_json[:id] = tagger.create_ref(wf.handle)
-      weather_json[:dis] = tagger.create_str(wf.city)
-      weather_json[:weather] = "m:"
-      weather_json[:tz] = tagger.create_num(wf.timeZone)
-      weather_json[:geoCoord] = "c:#{wf.latitude},#{wf.longitude}"
-      haystack_json << weather_json
+      weather = tagger.tag_weather(wf.handle, wf.city, wf.timeZone, wf.latitude, wf.longitude)
+      floor = tagger.tag_floor(simCon.handle)
+      haystack_json.push(site, weather, floor)
 
-      #floor tag
-      simCon = model.getSimulationControl  #use this for now until floors are defined
-      floor_json[:id] = tagger.create_ref(simCon.handle)
-      floor_json[:dis] = tagger.create_str("floor discription")
-      floor_json[:floor] = "m:"
-      haystack_json << floor_json
     end
 
     ## Add tags to the time-variable outputs

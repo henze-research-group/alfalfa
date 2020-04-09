@@ -225,8 +225,55 @@ module OpenStudio
         return sensor
       end
 
+      def tag_site(handle, name, floor_area, weather_ref, time_zone, city, state, country, lat, long)
+        """
+        create a haystack compliant site definition
+        :params: an OS models building [handle, name, floor_area, weather_ref, time_zone, city, state, country, lat, long]
+        :return: json representation of a haystack site definition
+        """
+        site = Hash.new
+        site[:id] = create_ref(handle)
+        site[:dis] = create_str(name.to_s)
+        site[:site] = "m:"
+        site[:area] = create_num(floor_area)
+        site[:weatherRef] = create_ref(weather_ref)
+        site[:tz] = create_num(time_zone)
+        site[:geoCity] = create_str(city)
+        site[:geoState] = create_str(state)
+        site[:geoCountry] = create_str(country)
+        site[:geoCoord] = "c:#{lat},#{long}"
+        site[:simStatus] = "s:Stopped"
+        site[:simType] = "s:osm"
+        return site
+      end
+
+      def tag_weather(handle, city, time_zone, lat, long)
+        """
+        create a haystack compliant weather definition
+        :params: an OS models building [handle, time_zone, city, lat, long]
+        :return: json representation of a haystack weather definition
+        """
+        weather = Hash.new
+        weather[:id] = create_ref(handle)
+        weather[:dis] = create_str(city)
+        weather[:weather] = "m:"
+        weather[:tz] = create_num(time_zone)
+        weather[:geoCoord] = "c:#{lat},#{long}"
+        return weather
+      end
+
+      def tag_floor(handle)
+        """
+        create a haystack compliant weather definition
+        :params: an OS models building Simulation Control handle
+        :return: json representation of a haystack floor representation
+        """
+        floor = Hash.new
+        floor[:id] = create_ref(handle)
+        floor[:dis] = create_str("floor discription")
+        floor[:floor] = "m:"
+        return floor
+      end
     end
-
   end
-
 end
