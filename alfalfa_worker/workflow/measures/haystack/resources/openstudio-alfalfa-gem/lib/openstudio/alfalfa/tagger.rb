@@ -291,6 +291,22 @@ module OpenStudio
         sensor[:curStatus] = "s:disabled"
         return sensor
       end
+
+      def tag_writable_point(global, b_handle, uuid)
+        """
+        create a haystack compliant user defined writable points from output variables
+        :params: an OS models output variables hand, name, and building handle
+        :return: json representation of a haystack sensor
+        """
+        writable_point = Hash.new
+        writable_point[:id] = uuid
+        writable_point[:dis] = create_str(global)
+        writable_point[:siteRef] = create_ref(b.handle)
+        writable_point[:point]="m:"
+        writable_point[:writable]="m:"
+        writable_point[:writeStatus] = "s:ok"
+        return writable_point
+      end
     end
   end
 end

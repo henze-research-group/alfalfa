@@ -165,16 +165,9 @@ class Haystack < OpenStudio::Ruleset::ModelUserScript
     global_vars.each do |globalvar|
       if globalvar.exportToBCVTB
         uuid = tagger.create_ref(globalvar.handle)
-
         if not globalvar.nameString.end_with?("_Enable")
-          var_haystack_json = Hash.new
-          var_haystack_json[:id] = uuid
-          var_haystack_json[:dis] = tagger.create_str(globalvar.nameString)
-          var_haystack_json[:siteRef] = tagger.create_ref(building.handle)
-          var_haystack_json[:point]="m:"
-          var_haystack_json[:writable]="m:"
-          var_haystack_json[:writeStatus] = "s:ok"
-          haystack_json << var_haystack_json
+          user_defined_writable_point = tagger.tag_writable_point(globalvar.nameString, building.handle, uuid)
+          haystack_json << user_defined_writable_point
         end
 
         var_mapping_json = Hash.new
