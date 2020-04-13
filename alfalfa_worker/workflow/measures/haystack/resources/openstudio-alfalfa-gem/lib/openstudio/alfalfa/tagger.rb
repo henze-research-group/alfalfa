@@ -274,6 +274,23 @@ module OpenStudio
         floor[:floor] = "m:"
         return floor
       end
+
+      def tag_sensor(o_handle, name, b_handle)
+        """
+        create a haystack compliant user defined sensor point from output variables
+        :params: an OS models output variables hand, name, and building handle
+        :return: json representation of a haystack sensor
+        """
+        sensor = Hash.new
+        uuid = create_ref(o_handle)
+        sensor[:id] = uuid
+        sensor[:dis] = create_str(name)
+        sensor[:siteRef] = create_ref(b_handle)
+        sensor[:point]="m:"
+        sensor[:cur]="m:"
+        sensor[:curStatus] = "s:disabled"
+        return sensor
+      end
     end
   end
 end

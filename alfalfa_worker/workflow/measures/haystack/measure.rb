@@ -112,7 +112,7 @@ class Haystack < OpenStudio::Ruleset::ModelUserScript
       building = model.getBuilding
       simCon = model.getSimulationControl
 
-      #Define the site, weather, and floor for haystack represetnation
+      #Define the site, weather, and floor for haystack
       site = tagger.tag_site(building.handle, building.name, building.floorArea,
                                 wf.handle, wf.timeZone, wf.city, wf.stateProvinceRegion, wf.country, wf.latitude, wf.longitude)
 
@@ -144,17 +144,11 @@ class Haystack < OpenStudio::Ruleset::ModelUserScript
     output_vars = model.getOutputVariables
     output_vars.each do |outvar|
       if outvar.exportToBCVTB
+
+        user_defined_sensor_point = tagger.tag_sensor(outvar.handle, outvar.nameString, building.handle)
+        haystack_json << user_defined_sensor_point
+
         uuid = tagger.create_ref(outvar.handle)
-
-        var_haystack_json = Hash.new
-        var_haystack_json[:id] = uuid
-        var_haystack_json[:dis] = tagger.create_str(outvar.nameString)
-        var_haystack_json[:siteRef] = tagger.create_ref(building.handle)
-        var_haystack_json[:point]="m:"
-        var_haystack_json[:cur]="m:"
-        var_haystack_json[:curStatus] = "s:disabled"
-        haystack_json << var_haystack_json
-
         var_map_json = Hash.new
         var_map_json[:id] = uuid
         var_map_json[:source] = "EnergyPlus"
