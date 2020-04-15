@@ -207,23 +207,19 @@ class Haystack < OpenStudio::Ruleset::ModelUserScript
       #AHU discharge sensors
       #discharge air node
       discharge_air_node = airloop.supplyOutletNode
-      #Temp Sensor
-      haystack_temp_json, temp_uuid = tagger.create_point_uuid("sensor", "#{airloop.name.to_s} Discharge Air Temp Sensor", building.handle, airloop.handle, simCon.handle, "discharge", "air", "temp", "Number", "C")
-      haystack_json << haystack_temp_json
-      discharge_air_temp_sensor, temp_json = tagger.create_EMS_sensor_bcvtb("System Node Temperature", discharge_air_node, "#{airloop.name.to_s} Discharge Air Temp Sensor", temp_uuid, report_freq, model)
+      #Tag Temp, Pressure, Humidity, and Flow Sensors
+      discharge_temp_sensor, discharge_temp_uuid = tagger.create_point_uuid("sensor", "#{airloop.name.to_s} Discharge Air Temp Sensor", building.handle, airloop.handle, simCon.handle, "discharge", "air", "temp", "Number", "C")
+      discharge_pressure_sensor, discharge_pressure_uuid = tagger.create_point_uuid("sensor", "#{airloop.name.to_s} Discharge Air Pressure Sensor", building.handle, airloop.handle, simCon.handle, "discharge", "air", "pressure", "Number", "Pa")
+      discharge_humidity_sensor, discharge_humidity_uuid = tagger.create_point_uuid("sensor", "#{airloop.name.to_s} Discharge Air Humidity Sensor", building.handle, airloop.handle, simCon.handle, "discharge", "air", "humidity", "Number", "%")
+      discharge_flow_sensor, discharge_flow_uuid = tagger.create_point_uuid("sensor", "#{airloop.name.to_s} Discharge Air Flow Sensor", building.handle, airloop.handle, simCon.handle, "discharge", "air", "flow", "Number", "Kg/s")
+      haystack_json.push(discharge_temp_sensor, discharge_pressure_sensor, discharge_humidity_sensor, discharge_flow_sensor)
+
+      #Controls Definitions and assignments
+      discharge_air_temp_sensor, temp_json = tagger.create_EMS_sensor_bcvtb("System Node Temperature", discharge_air_node, "#{airloop.name.to_s} Discharge Air Temp Sensor", discharge_temp_uuid, report_freq, model)
       mapping_json << temp_json
-      #Pressure Sensor
-      haystack_temp_json, temp_uuid = tagger.create_point_uuid("sensor", "#{airloop.name.to_s} Discharge Air Pressure Sensor", building.handle, airloop.handle, simCon.handle, "discharge", "air", "pressure", "Number", "Pa")
-      haystack_json << haystack_temp_json
       discharge_air_pressure_sensor = tagger.create_EMS_sensor("System Node Pressure", discharge_air_node, "#{airloop.name.to_s} Discharge Air Pressure Sensor", report_freq, model)
-      #Humidity Sensor
-      haystack_temp_json, temp_uuid = tagger.create_point_uuid("sensor", "#{airloop.name.to_s} Discharge Air Humidity Sensor", building.handle, airloop.handle, simCon.handle, "discharge", "air", "humidity", "Number", "%")
-      haystack_json << haystack_temp_json
       discharge_air_humidity_sensor = tagger.create_EMS_sensor("System Node Relative Humidity", discharge_air_node, "#{airloop.name.to_s} Discharge Air Humidity Sensor", report_freq, model)
-      #Flow Sensor
-      haystack_temp_json, temp_uuid = tagger.create_point_uuid("sensor", "#{airloop.name.to_s} Discharge Air Flow Sensor", building.handle, airloop.handle, simCon.handle, "discharge", "air", "flow", "Number", "Kg/s")
-      haystack_json << haystack_temp_json
-      discharge_air_flow_sensor, temp_json = tagger.create_EMS_sensor_bcvtb("System Node Mass Flow Rate", discharge_air_node, "#{airloop.name.to_s} Discharge Air Flow Sensor", temp_uuid, report_freq, model)
+      discharge_air_flow_sensor, temp_json = tagger.create_EMS_sensor_bcvtb("System Node Mass Flow Rate", discharge_air_node, "#{airloop.name.to_s} Discharge Air Flow Sensor", discharge_flow_uuid, report_freq, model)
       mapping_json << temp_json
 
       supply_components = airloop.supplyComponents
