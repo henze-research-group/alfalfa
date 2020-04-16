@@ -317,6 +317,35 @@ function writePointResolver(context,siteRef, pointName, value, level) {
   });
 }
 
+function uploadFileResolver(args, req, res){
+
+  const params = {
+      Bucket: process.env.S3_BUCKET,
+      Fields: {
+        key: req.body.name
+      }
+    };
+  s3client.createPresignedPost(params, function(err, data) {
+      if (err) {
+        throw err;
+      } else {
+        if ( process.env.S3_URL.indexOf("amazonaws") == -1 ) {
+          if (req.hostname.indexOf("alfalfa_web") == -1 ) {
+            const url = 'http://' + req.hostname + ':9000/' + process.env.S3_BUCKET;
+            data.url = url;
+          } else {
+            const url = 'http://minio:9000/alfalfa';
+            data.url = url;
+          }
+        }
+        res.send(JSON.stringify(data));
+        res.end();
+        return;
+      }
+    });
+
+}
+
 module.exports = { 
   runSimResolver, 
   addSiteResolver, 
@@ -327,6 +356,7 @@ module.exports = {
   sitePointResolver, 
   simsResolver, 
   advanceResolver,
-  writePointResolver 
+  writePointResolver,
+  uploadFileResolver
 };
 

@@ -42,6 +42,7 @@ import AWS from 'aws-sdk';
 
 var client = new AWS.S3({endpoint: process.env.S3_URL});
 
+
 const redis = node_redis.createClient({host: process.env.REDIS_HOST});
 const pub = redis.duplicate();
 const sub = redis.duplicate();
@@ -91,6 +92,7 @@ MongoClient.connect(process.env.MONGO_URL).then((mongoClient) => {
 
   // Create a post url for file uploads
   // from a browser
+  //TODO: Convert this to grapghql
   app.post('/upload-url', (req, res) => {
     // Construct a new postPolicy.
     const params = {

@@ -183,8 +183,8 @@ class Upload extends React.Component {
 
         xhr.send(formData);  // multipart/form-data
       };
-
-      const url = '/upload-url';
+      //TODO: Chnage this to graphql?
+      const url = '/graphql';
       const params = JSON.stringify({ name: key });
       request.open('POST', url, true);
       request.setRequestHeader("Content-type", "application/json; charset=utf-8");

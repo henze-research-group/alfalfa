@@ -284,6 +284,16 @@ const mutationType = new GraphQLObjectType({
       resolve: (_,{siteRef, pointName, value, level},context) => {
         return resolvers.writePointResolver(context, siteRef, pointName, value, level);
       }
+    },
+    uploadFile: {
+      name: 'UploadFile',
+      type: GraphQLString,
+      args: {
+        FileName : { type: new GraphQLNonNull(GraphQLString) },
+      },
+      resolve: (_,args,req, res) => {
+        resolvers.uploadFileResolver(args.FileName, req, res);
+      },
     }
   })
 });
