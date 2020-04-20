@@ -301,11 +301,32 @@ module OpenStudio
         writable_point = Hash.new
         writable_point[:id] = uuid
         writable_point[:dis] = create_str(global)
-        writable_point[:siteRef] = create_ref(b.handle)
+        writable_point[:siteRef] = create_ref(b_handle)
         writable_point[:point]="m:"
         writable_point[:writable]="m:"
         writable_point[:writeStatus] = "s:ok"
         return writable_point
+      end
+
+      def tag_thermal_zones(model)
+        """
+        create a haystack compliant list of thermal zones
+        :params: an OS model
+        :return: json representation of a haystack thermal zone
+        """
+        thermal_zone_list = []
+        thermal_zones = model.getThermalZones
+
+        thermal_zones.each do |tz|
+          if tz.name.is_initialized
+            thermal_zone = Hash.new
+            name = tz.name.get
+            thermal_zone[:name] = name
+            ## define haystack tagset here
+            thermal_zone_list.push(thermal_zone)
+          end
+        end
+        return thermal_zone_list
       end
     end
   end

@@ -159,6 +159,11 @@ class Haystack < OpenStudio::Ruleset::ModelUserScript
       end
     end
 
+    # Tag thermal zones
+    thermal_zones = tagger.tag_thermal_zones(model)
+    puts(thermal_zones)
+    #haystack_json << thermal_zones
+
     # Export all user defined EnergyManagementSystemGlobalVariable objects
     # as haystack writable points
     global_vars = model.getEnergyManagementSystemGlobalVariables
@@ -182,6 +187,7 @@ class Haystack < OpenStudio::Ruleset::ModelUserScript
 
     #loop through air loops and find economizers
     model.getAirLoopHVACs.each do |airloop|
+
       supply_components = airloop.supplyComponents
       #find AirLoopHVACOutdoorAirSystem on loop
       supply_components.each do |supply_component|
