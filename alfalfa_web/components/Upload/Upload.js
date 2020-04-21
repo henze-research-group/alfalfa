@@ -126,7 +126,7 @@ class Upload extends React.Component {
 
   onClick(onCompleteProp) {
     if( this.state.modelFile ) {
-      const key = `uploads/${this.state.uploadID}/${this.state.modelFile.name}`;
+      const key = `graphql/${this.state.uploadID}/${this.state.modelFile.name}`;
 
       const request = new XMLHttpRequest();
 
