@@ -319,14 +319,65 @@ module OpenStudio
 
         thermal_zones.each do |tz|
           if tz.name.is_initialized
-            thermal_zone = Hash.new
-            name = tz.name.get
-            thermal_zone[:name] = name
             ## define haystack tagset here
-            thermal_zone_list.push(thermal_zone)
+            thermal_zone_haystack = Hash.new
+            name = tz.name.get
+            thermal_zone_haystack[:name] = name
+            thermal_zone_haystack[:hvac] = ??
+            thermal_zone_haystack[:zone] = ??
+            thermal_zone_haystack[:space] = ??
+            thermal_zone_list.push(thermal_zone_haystack)
           end
         end
         return thermal_zone_list
+      end
+
+      def tag_fans(model)
+        """
+        create a haystack compliant list of model fans
+        :params: an OS model
+        :return: json representation of a haystack fan
+        """
+        fan_list = []
+        model.getAirLoopHVACs.each do |airloop|
+          supply_components = airloop.supplyComponents
+          #find AirLoopHVACOutdoorAirSystem on loop
+          supply_components.each do |supply_component|
+            if supply_component.to_AirLoopHVACOutdoorAirSystem.is_initialized
+              #no fan?
+            elsif supply_component.to_AirLoopHVACUnitarySystem.is_initialized
+              sc = supply_component.to_AirLoopHVACUnitarySystem.get
+              fan = sc.supplyFan
+              if fan.is_initialized
+                #AHU FAN equip
+                if fan.get.to_FanVariableVolume.is_initialized
+                  #puts("found VAV #{fan.get.name.to_s} on airloop #{airloop.name.to_s}")
+                  vav_fan_json = create_fan(fan.get.handle, "#{fan.get.name.to_s}", building.handle, airloop.handle, simCon.handle, true)
+                  fan_list.push(vav_fan_json)
+                else
+                  #puts("found CAV #{fan.get.name.to_s} on airloop #{airloop.name.to_s}")
+                  cav_fan_json = create_fan(fan.get.handle, "#{fan.get.name.to_s}", building.handle, airloop.handle, simCon.handle, false)
+                  fan_list.push(cav_fan_json)
+                end
+              end
+            elsif supply_component.to_FanConstantVolume.is_initialized
+              sc = supply_component.to_FanConstantVolume.get
+              #puts("found #{sc.name.to_s} on airloop #{airloop.name.to_s}")
+              fan_const_vol_json = create_fan(sc.handle, "#{sc.name.to_s}", building.handle, airloop.handle, simCon.handle, false)
+              fan_list.push(fan_const_vol_json)
+            elsif supply_component.to_FanVariableVolume.is_initialized
+              sc = supply_component.to_FanVariableVolume.get
+              #puts("found #{sc.name.to_s} on airloop #{airloop.name.to_s}")
+              fan_variable_vol_json = create_fan(sc.handle, "#{sc.name.to_s}", building.handle, airloop.handle, simCon.handle, false)
+              fan_list.push(fan_variable_vol_json)
+            elsif supply_component.to_FanOnOff.is_initialized
+              sc = supply_component.to_FanOnOff.get
+              #puts("found #{sc.name.to_s} on airloop #{airloop.name.to_s}")
+              fan_on_off_json = create_fan(sc.handle, "#{sc.name.to_s}", building.handle, airloop.handle, simCon.handle, false)
+              fan_list.push(fan_on_off_json)
+            end
+          end
+        end
       end
     end
   end

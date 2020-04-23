@@ -140,6 +140,8 @@ class Haystack < OpenStudio::Ruleset::ModelUserScript
 
     # Export all user defined OutputVariable objects
     # as haystack sensor points
+
+
     building = model.getBuilding
     output_vars = model.getOutputVariables
     output_vars.each do |outvar|
@@ -162,7 +164,13 @@ class Haystack < OpenStudio::Ruleset::ModelUserScript
     # Tag thermal zones
     thermal_zones = tagger.tag_thermal_zones(model)
     puts(thermal_zones)
+    #Comment this in when the tagutils.py is figured out
     #haystack_json << thermal_zones
+
+    #Tag fans
+    fans = tagger.tag_fans(model)
+    puts(fans)
+
 
     # Export all user defined EnergyManagementSystemGlobalVariable objects
     # as haystack writable points
