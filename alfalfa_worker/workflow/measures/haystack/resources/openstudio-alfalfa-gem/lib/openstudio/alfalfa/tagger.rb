@@ -322,10 +322,10 @@ module OpenStudio
             ## define haystack tagset here
             thermal_zone_haystack = Hash.new
             name = tz.name.get
-            thermal_zone_haystack[:name] = name
-            thermal_zone_haystack[:hvac] = ??
-            thermal_zone_haystack[:zone] = ??
-            thermal_zone_haystack[:space] = ??
+            thermal_zone_haystack[:name] = "dis:"
+            thermal_zone_haystack[:hvac] = "m:"
+            thermal_zone_haystack[:zone] = "m:"
+            thermal_zone_haystack[:space] = "m:"
             thermal_zone_list.push(thermal_zone_haystack)
           end
         end
