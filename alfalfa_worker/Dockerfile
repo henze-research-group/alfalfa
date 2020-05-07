@@ -21,8 +21,9 @@ RUN apt-get update \
     && curl -sL https://deb.nodesource.com/setup_6.x | bash - \
     && apt-get install -y ca-certificates nodejs
 
-ENV OPENSTUDIO_DOWNLOAD_FILENAME OpenStudio-2.8.1.240bd7e1e8-Linux.deb
-ENV OPENSTUDIO_DOWNLOAD_URL https://openstudio-ci-builds.s3-us-west-2.amazonaws.com/alfalfa/OpenStudio-2.8.1.240bd7e1e8-Linux.deb
+
+ENV OPENSTUDIO_DOWNLOAD_FILENAME OpenStudio-3.0.0-rc2%2Bc1a45f4753-Linux.deb
+ENV OPENSTUDIO_DOWNLOAD_URL https://openstudio-builds.s3.amazonaws.com/3.0.0/OpenStudio-3.0.0-rc2%2Bc1a45f4753-Linux.deb
 
 ENV ENERGYPLUS_VERSION 9.1.0
 ENV ENERGYPLUS_TAG v9.1.0
@@ -61,6 +62,10 @@ WORKDIR /alfalfa
 RUN pip3 install .
 
 WORKDIR /alfalfa/alfalfa_worker
+
+RUN Gem install bundler ./
+RUN bundler install --path  ./
+
 RUN tar -czf workflow.tar.gz workflow
 
 ENV ROOT_DIR /usr/local
@@ -71,4 +76,6 @@ ENV SEPARATE_PROCESS_JVM /usr/lib/jvm/java-8-openjdk-amd64/
 ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64/
 ENV PYTHONPATH $PYTHONPATH:$JMODELICA_HOME/Python:$JMODELICA_HOME/Python/pymodelica
 
+
 CMD [ "/alfalfa/start_worker.sh" ]
+
