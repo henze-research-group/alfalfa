@@ -21,6 +21,9 @@ RUN apt-get update \
     && curl -sL https://deb.nodesource.com/setup_6.x | bash - \
     && apt-get install -y ca-certificates nodejs
 
+RUN apt-add-repository ppa:brightbox/ruby-ng && \
+    apt-get update && \
+    apt-get install -y ruby2.5 ruby2.5-dev
 
 ENV OPENSTUDIO_DOWNLOAD_FILENAME OpenStudio-3.0.0-rc2%2Bc1a45f4753-Linux.deb
 ENV OPENSTUDIO_DOWNLOAD_URL https://openstudio-builds.s3.amazonaws.com/3.0.0/OpenStudio-3.0.0-rc2%2Bc1a45f4753-Linux.deb
@@ -63,7 +66,7 @@ RUN pip3 install .
 
 WORKDIR /alfalfa/alfalfa_worker
 
-RUN Gem install bundler ./
+RUN gem install bundler
 RUN bundler install --path  ./
 
 RUN tar -czf workflow.tar.gz workflow
