@@ -1,4 +1,4 @@
-FROM michaelwetter/ubuntu-1604_jmodelica_trunk
+FROM michaelwetter/ubuntu-1804_jmodelica_trunk
 
 USER root
 ENV HOME /home/alfalfa
@@ -6,8 +6,13 @@ ENV HOME /home/alfalfa
 WORKDIR /alfalfa
 
 RUN apt-get update -y && apt-get install -y \
-    ca-certificates curl libglu1 libjpeg8 libfreetype6 libxi6 libdbus-glib-1-2 libfontconfig1 libsm6 gdebi-core python3.5 python3-pip \
+    ca-certificates curl libglu1 libjpeg8 libfreetype6 libxi6 libdbus-glib-1-2 libfontconfig1 libsm6 gdebi-core software-properties-common \
     && apt-get install -y git
+
+RUN apt-add-repository ppa:deadsnakes/ppa
+RUN apt-get -y update
+RUN apt-get -y install python3.5
+RUN apt-get -y install python3-pip
 
 RUN apt-get update \
     && apt-get install -y software-properties-common \

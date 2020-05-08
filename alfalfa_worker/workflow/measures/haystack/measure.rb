@@ -24,7 +24,7 @@
 ########################################################################################################################
 
 require 'json'
-require_relative 'resources/openstudio-alfalfa-gem/lib/openstudio/alfalfa'
+require 'openstudio-alfalfa'
 
 # start the measure
 class Haystack < OpenStudio::Ruleset::ModelUserScript

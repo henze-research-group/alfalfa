@@ -151,7 +151,7 @@ class AddSite:
         self.extract_workflow_tar()
 
         # Run OS Workflow on uploaded file to apply afalfa necessary measures
-        call(['openstudio', 'run', '-m', '-w', self.workflow_osw_path])
+        call(['openstudio', '--bundle', '../', '--bundle_path', '../ruby/2.5.0/bundle', '-m', '-w', self.workflow_osw_path])
 
         self.os_files_final_touches_and_upload()
 
