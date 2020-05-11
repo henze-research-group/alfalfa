@@ -30,8 +30,8 @@ RUN apt-add-repository ppa:brightbox/ruby-ng && \
     apt-get update && \
     apt-get install -y ruby2.5 ruby2.5-dev
 
-ENV OPENSTUDIO_DOWNLOAD_FILENAME OpenStudio-3.0.0-rc2%2Bc1a45f4753-Linux.deb
-ENV OPENSTUDIO_DOWNLOAD_URL https://openstudio-builds.s3.amazonaws.com/3.0.0/OpenStudio-3.0.0-rc2%2Bc1a45f4753-Linux.deb
+ENV OPENSTUDIO_DOWNLOAD_FILENAME OpenStudio-3.0.0%2B1c9617fa4e-Linux.deb
+ENV OPENSTUDIO_DOWNLOAD_URL https://openstudio-builds.s3.amazonaws.com/3.0.0/OpenStudio-3.0.0%2B1c9617fa4e-Linux.deb
 
 ENV ENERGYPLUS_VERSION 9.1.0
 ENV ENERGYPLUS_TAG v9.1.0
@@ -72,7 +72,7 @@ RUN pip3 install .
 WORKDIR /alfalfa/alfalfa_worker
 
 RUN gem install bundler
-RUN bundler install --path  ./
+RUN bundle install --path ./
 
 RUN tar -czf workflow.tar.gz workflow
 
