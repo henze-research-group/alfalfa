@@ -70,7 +70,7 @@ class Haystack < OpenStudio::Ruleset::ModelUserScript
     runner.registerInfo("local_test = #{local_test}")
 
     #initialize tagger
-    tagger = OpenStudio::Alfalfa::Tagger.new
+    tagger = OpenStudio::Alfalfa::Tagger.new(model)
 
     #Global Vars
     report_freq = "timestep"
@@ -80,6 +80,7 @@ class Haystack < OpenStudio::Ruleset::ModelUserScript
     mapping_json = []
     num_economizers = 0
     airloops = []
+    fan_list = []
 
     #Master Enable
     if local_test == false
@@ -113,12 +114,10 @@ class Haystack < OpenStudio::Ruleset::ModelUserScript
       simCon = model.getSimulationControl
 
       #Define the site, weather, and floor for haystack
-      site = tagger.tag_site(building.handle, building.name, building.floorArea,
-                                wf.handle, wf.timeZone, wf.city, wf.stateProvinceRegion, wf.country, wf.latitude, wf.longitude)
-
-      weather = tagger.tag_weather(wf.handle, wf.city, wf.timeZone, wf.latitude, wf.longitude)
-      floor = tagger.tag_floor(simCon.handle)
-      haystack_json.push(site, weather, floor)
+      site = tagger.tag_site()
+      weather = tagger.tag_weather()
+      floor = tagger.tag_stories()
+      #haystack_json.push(site, weather, floor)
 
     end
 
@@ -162,14 +161,15 @@ class Haystack < OpenStudio::Ruleset::ModelUserScript
     end
 
     # Tag thermal zones
-    thermal_zones = tagger.tag_thermal_zones(model)
-    puts(thermal_zones)
+    tagger.tag_thermal_zones()
     #Comment this in when the tagutils.py is figured out
     #haystack_json << thermal_zones
 
     #Tag fans
-    fans = tagger.tag_fans(model)
-    puts(fans)
+    tagger.tag_base_ahus()
+    tagger.tag_air_loops()
+    tagger.tag_air_terminal_units()
+
 
 
     # Export all user defined EnergyManagementSystemGlobalVariable objects

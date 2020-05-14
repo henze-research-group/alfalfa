@@ -68,7 +68,8 @@ try:
 
     osws = glob.glob(("%s/**/*.osw" % directory), recursive=True)
     for oswpath in osws:
-        subprocess.call(['openstudio','--bundle Gemfile', '--bundle_path .gems', 'run', "-w", oswpath])
+        subprocess.call(['openstudio','--bundle', '/alfalfa/alfalfa_worker/Gemfile',
+                         '--bundle_path', '/alfalfa/alfalfa_worker/.gems', 'run', "-w", oswpath])
 
     os.remove(tarpath)
 

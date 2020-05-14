@@ -72,7 +72,7 @@ RUN pip3 install .
 WORKDIR /alfalfa/alfalfa_worker
 
 RUN gem install bundler
-RUN bundle install --path ./
+RUN bundle install --path .gems
 
 RUN tar -czf workflow.tar.gz workflow
 
