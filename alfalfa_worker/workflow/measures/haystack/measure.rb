@@ -69,11 +69,10 @@ class Haystack < OpenStudio::Ruleset::ModelUserScript
     local_test = runner.getBoolArgumentValue("local_test",user_arguments)
     runner.registerInfo("local_test = #{local_test}")
 
-    #initialize tagger
-    tagger = OpenStudio::Alfalfa::Tagger.new(model)
-
     #Global Vars
     report_freq = "timestep"
+
+    tagger = OpenStudio::Alfalfa::Tagger.new(model)
 
     #initialize variables
     haystack_json = []
@@ -112,12 +111,6 @@ class Haystack < OpenStudio::Ruleset::ModelUserScript
       wf = model.weatherFile.get
       building = model.getBuilding
       simCon = model.getSimulationControl
-
-      #Define the site, weather, and floor for haystack
-      site = tagger.tag_site()
-      weather = tagger.tag_weather()
-      floor = tagger.tag_stories()
-      #haystack_json.push(site, weather, floor)
 
     end
 
@@ -160,15 +153,16 @@ class Haystack < OpenStudio::Ruleset::ModelUserScript
       end
     end
 
-    # Tag thermal zones
-    tagger.tag_thermal_zones()
-    #Comment this in when the tagutils.py is figured out
-    #haystack_json << thermal_zones
+    #Tag everything using new gem
+        #initialize tagger
+    tagger.tag_site
+    tagger.tag_weather
+    tagger.tag_stories
+#   tagger.tag_base_ahus
+#   tagger.tag_air_loops
+#   tagger.tag_air_terminal_units
 
-    #Tag fans
-    tagger.tag_base_ahus()
-    tagger.tag_air_loops()
-    tagger.tag_air_terminal_units()
+    haystack_json.concat(tagger.haystack_json)
 
 
 

@@ -152,7 +152,7 @@ class AddSite:
 
         # Run OS Workflow on uploaded file to apply afalfa necessary measures
         call(['openstudio', '--bundle', '/alfalfa/alfalfa_worker/Gemfile',
-                         '--bundle_path', '/alfalfa/alfalfa_worker/.gems', 'run', "-w", self.workflow_osw_path])
+                         '--bundle_path', '/alfalfa/alfalfa_worker/.gems', 'run', '-m', '-w', self.workflow_osw_path])
         #call(['openstudio', '--bundle', '../', '--bundle_path', '../ruby/2.5.0/bundle', '-m', '-w', self.workflow_osw_path])
 
         self.os_files_final_touches_and_upload()
@@ -185,7 +185,9 @@ class AddSite:
             sys.exit(1)
 
         # Run initial workflow from zip file
-        call(['openstudio', 'run', '-m', '-w', osw_path])
+        call(['openstudio', '--bundle', '/alfalfa/alfalfa_worker/Gemfile',
+              '--bundle_path', '/alfalfa/alfalfa_worker/.gems', 'run', '-m', '-w', osw_path])
+        #call(['openstudio', 'run', '-m', '-w', osw_path])
 
         # Now take the osm produced by the osw and run
         # it through another workflow to generate tags
@@ -200,7 +202,10 @@ class AddSite:
         shutil.copyfile(user_epw_path, self.epw_path)
 
         # Rerun model through workflow for alfalfa specific workflow
-        call(['openstudio', 'run', '-m', '-w', self.workflow_osw_path])
+        #call(['openstudio', 'run', '-m', '-w', self.workflow_osw_path])
+
+        call(['openstudio', '--bundle', '/alfalfa/alfalfa_worker/Gemfile',
+              '--bundle_path', '/alfalfa/alfalfa_worker/.gems', 'run', '-m', '-w', self.workflow_osw_path])
 
         self.os_files_final_touches_and_upload()
 

@@ -10,6 +10,7 @@ import tarfile
 import boto3
 from pymongo import MongoClient
 from redis import Redis
+from pymongo.errors import BulkWriteError
 
 
 class AlfalfaConnections:
@@ -55,7 +56,7 @@ class AlfalfaConnections:
         with open(haystack_json) as json_file:
             data = json.load(json_file)
 
-        if site_ref:
+        try:
             array_to_insert = []
             for entity in data:
                 array_to_insert.append({
@@ -65,6 +66,9 @@ class AlfalfaConnections:
                 })
             response = self.mongo_db_recs.insert_many(array_to_insert)
             return response
+
+        except BulkWriteError as exc:
+            print(exc.details)
 
     def add_site_to_filestore(self, bucket_parsed_site_id_dir, site_ref):
         """
