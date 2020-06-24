@@ -99,7 +99,6 @@ class RunFMUSite:
         (self.tagid_and_outputs, self.id_and_dis, self.default_input) = self.create_tag_dictionaries(tagpath)
 
         # initiate the testcase
-        print('initiate the testcase')
         self.tc = lib.testcase.TestCase(**config)
 
         # run the FMU simulation
@@ -109,7 +108,6 @@ class RunFMUSite:
 
         if self.externalClock:
             self.redis_pubsub.subscribe(self.site_ref)
-        print('end init')
 
     def create_tag_dictionaries(self, tag_filepath):
         '''
@@ -146,14 +144,9 @@ class RunFMUSite:
         return (outputs_and_ID, id_and_dis, default_input)
 
     def run(self):
-        print("start run")
-        sys.stdout.flush()
         self.init_sim_status()
 
-        print("externalClock: {}".format(self.externalClock))
-        sys.stdout.flush()
         if self.externalClock:
-            print('external clock is running')
             sys.stdout.flush()
             while True:
                 message = self.redis_pubsub.get_message()
@@ -167,8 +160,6 @@ class RunFMUSite:
                         self.set_idle_state()
                         break
         else:
-            print('internal clock is running')
-            sys.stdout.flush()
             while self.simtime < self.endTime:
                 if self.db_stop_set():
                     break
@@ -259,9 +250,6 @@ class RunFMUSite:
                 self.mongo_db_recs.update_one( {"_id": output_id }, {"$set": {"rec.curVal":"n:%s" %value_y, "rec.curStatus":"s:ok","rec.cur": "m:" }} )        
 
 if __name__ == "__main__":
-    print("lets get this simulation started: {}".format(sys.argv))
-    sys.stdout.flush()
-
     body = json.loads(sys.argv[1])
     site_ref = body.get('id')
     real_time_flag = bool(body.get('realtime'))
@@ -271,12 +259,5 @@ if __name__ == "__main__":
     externalClock = (body.get('externalClock') == 'true')
 
     runFMUSite = RunFMUSite(site_ref=site_ref, real_time_flag=real_time_flag, time_scale=time_scale, startTime=startTime, endTime=endTime, externalClock=externalClock)
-    print('instantiated')
-    sys.stdout.flush()
     runFMUSite.run()
-
-
-
-
-
 
