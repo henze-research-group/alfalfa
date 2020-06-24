@@ -11,7 +11,7 @@ import json
 
 # Local
 from alfalfa_worker.add_site.add_site_logger import AddSiteLogger
-from alfalfa_worker.lib import precheck_argus, make_ids_unique, replace_site_id
+from alfalfa_worker.lib import make_ids_unique, replace_site_id
 from alfalfa_worker.lib.alfalfa_connections import AlfalfaConnections
 
 class AddSite:
