@@ -47,8 +47,6 @@ const styles = theme => ({
   },
 });
 
-const timeFormat = "YYYY-MM-DD HH:mm:ss";
-
 class StartDialog extends React.Component {
 
   constructor(props) {
@@ -59,8 +57,6 @@ class StartDialog extends React.Component {
       realtime: false,
       externalClock: false,
       timescale: 5,
-      selectedStartTime: "",
-      selectedEndTime: "",
       selectedStartSeconds: 0,
       selectedEndSeconds: 86400,
     };
@@ -68,25 +64,12 @@ class StartDialog extends React.Component {
 
   componentWillMount = () => {
     console.log(this.props);
-    if ( this.props.type == 'osm' ) {
-      this.state.selectedStartTime = moment().format(timeFormat);
-      this.state.selectedEndTime = moment().format(timeFormat);
-    } else {
-      this.state.selectedStartSeconds = 0;
-      this.state.selectedEndSeconds = 86400;
-    }
-  }
-
-  handleStartTimeChange = time => {
-    this.setState({ selectedStartTime: time.format(timeFormat) })
+    this.state.selectedStartSeconds = 0;
+    this.state.selectedEndSeconds = 86400;
   }
 
   handleTimescaleChange = event => {
     this.setState({ timescale: Number(event.target.value) })
-  }
-
-  handleEndTimeChange = time => {
-    this.setState({ selectedEndTime: time.format(timeFormat) })
   }
 
   handleStartSecondChange = event => {
@@ -106,13 +89,8 @@ class StartDialog extends React.Component {
   }
 
   handleRequestStart = () => {
-    if ( this.props.type == 'osm' ) {
-      this.props.onStartSimulation(this.state.selectedStartTime,this.state.selectedEndTime,this.state.timescale,this.state.realtime,this.state.externalClock);
-      this.setState({open: false});
-    } else {
-      this.props.onStartSimulation(this.state.selectedStartSeconds.toString(),this.state.selectedEndSeconds.toString(),this.state.timescale,this.state.realtime,this.state.externalClock);
-      this.setState({open: false});
-    }
+    this.props.onStartSimulation(this.state.selectedStartSeconds.toString(),this.state.selectedEndSeconds.toString(),this.state.timescale,this.state.realtime,this.state.externalClock);
+    this.setState({open: false});
   }
 
   render = () => {
@@ -123,51 +101,29 @@ class StartDialog extends React.Component {
 
     let start;
     let stop;
-    if ( this.props.type == 'osm' ) {
-      start = 
-      <Grid item xs={6}>
-        <DateTimePicker
-          value={selectedStartTime}
-          onChange={this.handleStartTimeChange}
-          label="EnergyPlus Start Time"
-          disabled={realtime || externalClock}
-        />
-      </Grid>;
+    start = 
+    <Grid item xs={6}>
+      <TextField 
+        label="FMU Start Time"
+        value={selectedStartSeconds}
+        onChange={this.handleStartSecondChange}
+        InputLabelProps={{shrink: true, className: this.props.classes.label}}
+        disabled={realtime || externalClock}
+        inputProps={{type: 'number', max: selectedEndSeconds}}
+      />
+    </Grid>;
 
-      stop = 
-      <Grid item xs={6}>
-        <DateTimePicker
-          value={selectedEndTime}
-          onChange={this.handleEndTimeChange}
-          label="EnergyPlus End Time"
-          disabled={realtime || externalClock}
-        />
-      </Grid>;
-    } else {
-      start = 
-      <Grid item xs={6}>
-        <TextField 
-          label="FMU Start Time"
-          value={selectedStartSeconds}
-          onChange={this.handleStartSecondChange}
-          InputLabelProps={{shrink: true, className: this.props.classes.label}}
-          disabled={realtime || externalClock}
-          inputProps={{type: 'number', max: selectedEndSeconds}}
-        />
-      </Grid>;
-
-      stop = 
-      <Grid item xs={6}>
-        <TextField 
-          label="FMU Stop Time"
-          value={selectedEndSeconds}
-          onChange={this.handleEndSecondChange}
-          InputLabelProps={{shrink: true, className: this.props.classes.label}}
-          disabled={realtime || externalClock}
-          inputProps={{type: 'number', min: selectedStartSeconds}}
-        />
-      </Grid>;
-    }
+    stop = 
+    <Grid item xs={6}>
+      <TextField 
+        label="FMU Stop Time"
+        value={selectedEndSeconds}
+        onChange={this.handleEndSecondChange}
+        InputLabelProps={{shrink: true, className: this.props.classes.label}}
+        disabled={realtime || externalClock}
+        inputProps={{type: 'number', min: selectedStartSeconds}}
+      />
+    </Grid>;
 
     return (
       <div>

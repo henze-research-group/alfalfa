@@ -19,7 +19,6 @@ import os
 import platform
 import json
 
-
 class Data_Generator(object):
     '''
     This class generates weather data, energy prices,
