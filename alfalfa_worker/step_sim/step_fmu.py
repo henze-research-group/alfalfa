@@ -37,6 +37,9 @@ import pytz
 import redis
 from distutils import util
 from pymongo import MongoClient
+import imp
+config_module = imp.new_module('config')
+sys.modules['config'] = config_module 
 
 import lib
 import lib.testcase
@@ -88,18 +91,23 @@ class RunFMUSite:
         zzip = zipfile.ZipFile(fmupath)
         zzip.extract('resources/kpis.json', self.directory)
 
-        # Load fmu
-        config = {
-            'fmupath': fmupath,
-            'start_time': self.startTime,
-            'step': 300,
-            'kpipath': self.directory + '/resources/kpis.json'
-        }
-
         (self.tagid_and_outputs, self.id_and_dis, self.default_input) = self.create_tag_dictionaries(tagpath)
 
+        config_code = """
+def get_config():
+    c = dict()
+    c['fmupath'] = '{}'
+    c['step'] = 60
+    c['horizon'] = 86400
+    c['interval'] = 3600
+    return c"""
+
+        config_code = config_code.format(fmupath)
+        print(config_code)
+        exec config_code in config_module.__dict__
+
         # initiate the testcase
-        self.tc = lib.testcase.TestCase(**config)
+        self.tc = lib.testcase.TestCase()
 
         # run the FMU simulation
         self.kstep = 0

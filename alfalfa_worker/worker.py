@@ -56,7 +56,7 @@ class Worker:
         upload_id = message_body.get('upload_id')
 
         self.worker_logger.logger.info('Add site for file_name: %s, and upload_id: %s' % (file_name, upload_id))
-        subprocess.call(['python3.5', 'add_site/add_site.py', file_name, upload_id])
+        subprocess.call(['python3', 'add_site/add_site.py', file_name, upload_id])
 
     def sim(self, message_body):
         """
@@ -107,13 +107,13 @@ class Worker:
                 # The version of pyfmi that is installed needs python 2.x, not 3.x
                 subprocess.call(['python', 'step_sim/step_fmu.py', json.dumps(message_body)])
             elif action == 'addSite':
-                subprocess.call(['python3.5', 'add_site/add_site.py', json.dumps(message_body)])
+                subprocess.call(['python3', 'add_site/add_site.py', json.dumps(message_body)])
 
         #file_name = message_body.get('osm_name')  # TODO: change message body to file_name (for fmu)
         #upload_id = message_body.get('upload_id')
 
         #self.worker_logger.logger.info('Add site for file_name: %s, and upload_id: %s' % (file_name, upload_id))
-        #subprocess.call(['python3.5', 'add_site/add_site.py', file_name, upload_id])
+        #subprocess.call(['python3', 'add_site/add_site.py', file_name, upload_id])
                 #self.tag(message_body)
 
     def run(self):

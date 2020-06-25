@@ -1,11 +1,11 @@
 {"weather": ["pAtm","nTot","nOpa","HGloHor",
-             "HDifHor","HDirNor","celHei","winSpe",
+             "HDifHor","HDirNor","ceiHei","winSpe",
              "HHorIR","winDir","cloTim","solTim",
              "TDewPoi","relHum","TDryBul","TWetBul",
              "solAlt","solZen","solDec","solHouAng",
              "lon","lat","TBlaSky"],
-"prices": ["PriceElectricPowerConstant",
-           "PriceElectricPowerDynamic",
+"prices": ["PriceElectricPowerConstant", 
+           "PriceElectricPowerDynamic", 
            "PriceElectricPowerHighlyDynamic",
            "PriceGasPower",
            "PriceDistrictHeatingPower",
@@ -17,5 +17,5 @@
               "EmissionsBiomassPower",
               "EmissionsSolarThermalPower"],
 "occupancy": ["Occupancy"],
-"internalGains": ["InternalGains"],
-"setpoints": ["LowerSetp", "UpperSetp"]}
+"internalGains": ["InternalGainsRad", "InternalGainsCon", "InternalGainsLat"],
+"setpoints": ["LowerSetp", "UpperSetp", "UpperCO2"]}

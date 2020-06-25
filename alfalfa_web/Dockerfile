@@ -13,7 +13,6 @@ RUN curl -sL https://deb.nodesource.com/setup_12.x | bash - \
     && npm install
 
 COPY alfalfa_web /root
-COPY lib/dbops.js /root/server/
 
 ARG NODE_ENV
 RUN npm run build

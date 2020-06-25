@@ -1,4 +1,4 @@
-FROM michaelwetter/ubuntu-1604_jmodelica_trunk
+FROM michaelwetter/ubuntu-1804_jmodelica_trunk
 
 USER root
 ENV HOME /home/alfalfa
@@ -18,10 +18,10 @@ RUN apt-get update \
     && update-alternatives --config javac
 
 RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py \
-  && python3.5 get-pip.py
+  && python3 get-pip.py
 
 COPY alfalfa_worker/requirements/production.txt /alfalfa/
-RUN  python3.5 -m pip install --ignore-installed -r /alfalfa/production.txt
+RUN  python3 -m pip install --ignore-installed -r /alfalfa/production.txt
 RUN  python -m pip install --ignore-installed -r /alfalfa/production.txt
 
 COPY . /alfalfa
