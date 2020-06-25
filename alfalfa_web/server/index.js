@@ -29,7 +29,6 @@ import hs from 'nodehaystack';
 import express from 'express';
 import url from 'url';
 import bodyParser from 'body-parser';
-import alfalfaServer from './alfalfa-server';
 import {MongoClient} from 'mongodb';
 import node_redis from 'redis';
 import graphQLHTTP from 'express-graphql';
@@ -70,8 +69,6 @@ MongoClient.connect(process.env.MONGO_URL).then((mongoClient) => {
 
   const db = mongoClient.db(process.env.MONGO_DB_NAME);
 
-  app.locals.alfalfaServer = new alfalfaServer(db, redis, pub, sub);
-
   app.use('/graphql', (request, response) => {
       return graphQLHTTP({
         graphiql: true,
@@ -80,7 +77,9 @@ MongoClient.connect(process.env.MONGO_URL).then((mongoClient) => {
         context: {
           ...request,
           db,
-          advancer
+          advancer,
+          pub,
+          sub
         }
       })(request,response)
     }
@@ -117,37 +116,6 @@ MongoClient.connect(process.env.MONGO_URL).then((mongoClient) => {
         res.end();
         return;
       }
-    });
-  });
-  
-  app.all('/api/*', function(req, res) {
-    // Remove this in production
-    var path = url.parse(req.url).pathname;
-    path = path.replace('/api','');
-  
-    // parse URI path into "/{opName}/...."
-    var slash = path.indexOf('/', 1);
-    if (slash < 0) slash = path.length;
-    var opName = path.substring(1, slash);
-  
-  
-    // resolve the op
-    app.locals.alfalfaServer.op(opName, false, function(err, op) {
-      if (typeof(op) === 'undefined' || op === null) {
-        res.status(404);
-        res.send("404 Not Found");
-        res.end();
-        return;
-      }
-  
-      // route to the op
-      op.onServiceOp(app.locals.alfalfaServer, req, res, function(err) {
-        if (err) {
-          console.log(err.stack);
-          throw err;
-        }
-        res.end();
-      });
     });
   });
   

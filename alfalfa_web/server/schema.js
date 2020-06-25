@@ -153,7 +153,6 @@ var userType = new GraphQLObjectType({
   name: 'User',
   description: 'A person who uses our app',
   fields: () => ({
-  //  id: globalIdField('User'),
     username: {
       type: GraphQLString,
       description: 'The username of a person', 
@@ -164,9 +163,8 @@ var userType = new GraphQLObjectType({
       args: {
         siteRef: { type: GraphQLString }
       },
-      resolve: (user,{siteRef},request) => {
-        //return ['site a', 'site b', 'site c']},
-        return resolvers.sitesResolver(user,siteRef);
+      resolve: (_,args,context) => {
+        return resolvers.sitesResolver(args, context);
       }
     },
     sims: {
@@ -193,29 +191,9 @@ var queryType = new GraphQLObjectType({
   }),
 });
 
-//const addJobMutation = new GraphQLObjectType({
-//  name: 'AddJob',
-//  type: GraphQLString,
-//  args: {
-//    modelFile : { type: new GraphQLNonNull(GraphQLString) },
-//  },
-//  resolve: (_,args,request) => {},
-//});
-
 const mutationType = new GraphQLObjectType({
   name: 'Mutations',
   fields: () => ({
-    runSim: { 
-      name: 'RunSim',
-      type: GraphQLString,
-      args: {
-        uploadFilename : { type: new GraphQLNonNull(GraphQLString) },
-        uploadID : { type: new GraphQLNonNull(GraphQLString) },
-      },
-      resolve: (_,args,context) => {
-        resolvers.runSimResolver(args.uploadFilename,args.uploadID,context);
-      },
-    },
     addSite: { 
       name: 'AddSite',
       type: GraphQLString,
@@ -223,8 +201,8 @@ const mutationType = new GraphQLObjectType({
         osmName : { type: new GraphQLNonNull(GraphQLString) },
         uploadID : { type: new GraphQLNonNull(GraphQLString) },
       },
-      resolve: (_,args,request) => {
-        resolvers.addSiteResolver(args.osmName,args.uploadID);
+      resolve: (_,args,context) => {
+        resolvers.addSiteResolver(args, context);
       },
     },
     runSite: {
@@ -238,8 +216,8 @@ const mutationType = new GraphQLObjectType({
         realtime : { type: GraphQLBoolean },
         externalClock : { type: GraphQLBoolean },
       },
-      resolve: (_,args,request) => {
-        resolvers.runSiteResolver(args);
+      resolve: (_,args,context) => {
+        resolvers.runSiteResolver(args,context);
       },
     },
     stopSite: {
@@ -248,8 +226,8 @@ const mutationType = new GraphQLObjectType({
       args: {
         siteRef : { type: new GraphQLNonNull(GraphQLString) },
       },
-      resolve: (_,args,request) => {
-        resolvers.stopSiteResolver(args);
+      resolve: (_,args,context) => {
+        resolvers.stopSiteResolver(args, context);
       },
     },
     removeSite: {
@@ -258,8 +236,8 @@ const mutationType = new GraphQLObjectType({
       args: {
         siteRef : { type: new GraphQLNonNull(GraphQLString) },
       },
-      resolve: (_,args,request) => {
-        resolvers.removeSiteResolver(args);
+      resolve: (_,args,context) => {
+        resolvers.removeSiteResolver(args, context);
       },
     },
     advance: {

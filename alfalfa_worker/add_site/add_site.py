@@ -146,8 +146,8 @@ class AddSite:
 if __name__ == "__main__":
     args = sys.argv
     body = json.loads(sys.argv[1])
-    file_name = body.get('osm_name')
-    upload_id = body.get('upload_id')
+    file_name = body.get('osmName')
+    upload_id = body.get('uploadID')
 
     adder = AddSite(file_name, upload_id)
     adder.main()

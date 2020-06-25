@@ -33,13 +33,18 @@ AWS.config.update({region: process.env.REGION});
 var sqs = new AWS.SQS();
 var s3client = new AWS.S3({endpoint: process.env.S3_URL});
 
-function addSiteResolver(osmName, uploadID) {
-  var params = {
-   MessageBody: `{"op": "InvokeAction", 
-      "action": "addSite", 
-      "osm_name": "${osmName}", 
-      "upload_id": "${uploadID}"
-    }`,
+function addJobToQueue(jobName, args) {
+  let body = {
+    "op": "InvokeAction",
+    "action": jobName
+  };
+
+  Object.entries(args).forEach(([key,value]) => {
+    body[key] = value;
+  });
+  
+  const params = {
+   MessageBody: JSON.stringify(body),
    QueueUrl: process.env.JOB_QUEUE_URL,
    MessageGroupId: "Alfalfa"
   };
@@ -47,163 +52,45 @@ function addSiteResolver(osmName, uploadID) {
   sqs.sendMessage(params, (err, data) => {
     if (err) {
       console.log(err);
-      callback(err);
     }
   });
 }
 
-function runSimResolver(uploadFilename, uploadID, context) {
-  var params = {
-   MessageBody: `{"op": "InvokeAction", 
-    "action": "runSim", 
-    "upload_filename": "${uploadFilename}", 
-    "upload_id": "${uploadID}"
-   }`,
-   QueueUrl: process.env.JOB_QUEUE_URL,
-   MessageGroupId: "Alfalfa"
+function addSiteResolver(args, context) {
+  addJobToQueue("addSite", args);
+}
+
+function runSiteResolver(args, context) {
+  const updateStatus = () => {
+    const recs = context.db.collection('recs');
+    return recs.updateOne(
+      { _id: args.siteRef },
+      { $set: { "rec.simStatus": "s:Starting" } }
+    );
   };
-  
-  sqs.sendMessage(params, (err, data) => {
-    if (err) {
-      callback(err);
-    } else {
-      const simcollection = context.db.collection('sims');
-      simcollection.insert( {_id: uploadID, siteRef: uploadID, simStatus: "Queued", name: path.parse(uploadFilename).name.replace(".tar","") } );
-    }
+
+  updateStatus().then(addJobToQueue("runSite", args));
+}
+
+function stopSiteResolver(args, context) {
+  const recs = context.db.collection('recs');
+  recs.updateOne(
+    { _id: args.siteRef },
+    { $set: { "rec.simStatus": "s:Stopping" } }
+  ).then( () => {
+    context.pub.publish(args.siteRef, "stop");
   });
 }
 
-function runSiteResolver(args) {
-    //args: {
-    //  siteRef : { type: new GraphQLNonNull(GraphQLString) },
-    //  startDatetime : { type: GraphQLString },
-    //  endDatetime : { type: GraphQLString },
-    //  timescale : { type: GraphQLFloat },
-    //  realtime : { type: GraphQLBoolean },
-    //  externalClock : { type: GraphQLBoolean },
-    //},
-  console.log("args: ", args)
-  return new Promise( (resolve,reject) => {
-    request
-    .post('/api/invokeAction')
-    .set('Accept', 'application/json')
-    .set('Content-Type', 'application/json')
-    .send({
-      "meta": {
-        "ver": "2.0",
-        "id": `r:${args.siteRef}`,
-        "action": "s:runSite"
-      },
-      "cols": [
-        {
-          "name": "timescale"
-        },
-        {
-          "name": "startDatetime"
-        },
-        {
-          "name": "endDatetime"
-        },
-        {
-          "name": "realtime"
-        },
-        {
-          "name": "externalClock"
-        },
-      ],
-      "rows": [
-        {
-          "timescale": `s:${args.timescale}`,
-          "startDatetime": `s:${args.startDatetime}`,
-          "endDatetime": `s:${args.endDatetime}`,
-          "realtime": `s:${args.realtime}`,
-          "externalClock": `s:${args.externalClock}`,
-        }
-      ]
-    })
-    .end((err, res) => {
-      if( err ) {
-        reject(err);
-      } else {
-        resolve(res.body);
-      }
-    })
-  });
+function removeSiteResolver(args, context) {
+  const recs = context.db.collection('recs');
+  const writearrays = context.db.collection('writearrays');
+
+  recs.deleteMany({site_ref: args.siteRef});
+  writearrays.deleteMany({siteRef: args.siteRef});
 }
 
-function stopSiteResolver(args) {
-      //args: {
-      //  siteRef : { type: new GraphQLNonNull(GraphQLString) },
-      //},
-  return new Promise( (resolve,reject) => {
-    request
-    .post('/api/invokeAction')
-    .set('Accept', 'application/json')
-    .set('Content-Type', 'application/json')
-    .send({
-      "meta": {
-        "ver": "2.0",
-        "id": `r:${args.siteRef}`,
-        "action": "s:stopSite"
-      },
-      "cols": [
-        {
-          "name": "foo" // because node Haystack craps out if there are no columns
-        },
-      ],
-      "rows": [
-        {
-          "foo": "s:bar",
-        }
-      ]
-    })
-    .end((err, res) => {
-      if( err ) {
-        reject(err);
-      } else {
-        resolve(res.body);
-      }
-    })
-  });
-}
-
-function removeSiteResolver(args) {
-      //args: {
-      //  siteRef : { type: new GraphQLNonNull(GraphQLString) },
-      //},
-  return new Promise( (resolve,reject) => {
-    request
-    .post('/api/invokeAction')
-    .set('Accept', 'application/json')
-    .set('Content-Type', 'application/json')
-    .send({
-      "meta": {
-        "ver": "2.0",
-        "id": `r:${args.siteRef}`,
-        "action": "s:removeSite"
-      },
-      "cols": [
-        {
-          "name": "foo" // because node Haystack craps out if there are no columns
-        },
-      ],
-      "rows": [
-        {
-          "foo": "s:bar",
-        }
-      ]
-    })
-    .end((err, res) => {
-      if( err ) {
-        reject(err);
-      } else {
-        resolve(res.body);
-      }
-    })
-  });
-}
-
-function  simsResolver(user,args,context) {
+function simsResolver(user,args,context) {
   return new Promise( (resolve,reject) => {
       let sims = [];
       const simcollection = context.db.collection('sims');
@@ -224,59 +111,39 @@ function  simsResolver(user,args,context) {
     });
 };
 
-function  sitesResolver(user,siteRef) {
-  let filter = "s:site";
-  if( siteRef ) {
-    filter = `${filter} and id==@${siteRef}`;
+function  sitesResolver(args, context) {
+  const removePrefix = (s) => {
+    if(s) {
+      return s.replace(/[a-z]\:/,'')
+    } else {
+      return undefined;
+    }
   }
-  return new Promise( (resolve,reject) => {
-    let sites = [];
-    request
-    .post('/api/read')
-    .set('Accept', 'application/json')
-    .send({
-      "meta": {
-        "ver": "2.0"
-      },
-      "cols": [
-        {
-          "name": "filter"
-        }
-      ],
-      "rows": [
-        {
-          "filter": filter,
-        }
-      ]
-    })
-    .end((err, res) => {
-      if( err ) {
-        reject(err);
-      } else {
-        res.body.rows.map( (row) => {
-          let site = {
-            name: row.dis.replace(/[a-z]\:/,''),
-            siteRef: row.id.replace(/[a-z]\:/,''),
-            simStatus: row.simStatus.replace(/[a-z]\:/,''),
-            simType: row.simType.replace(/[a-z]\:/,''),
-          };
-          let datetime = row['datetime'];
-          if( datetime ) {
-            datetime = datetime.replace(/[a-z]\:/,'');
-            site.datetime = datetime;
-          }
-
-          let step = row['step'];
-          if (step){
-            step=step.replace(/[a-z]\:/, '');
-            site.step=step;
-          }
-
-          sites.push(site);
-        });
-        resolve(sites);
-      }
-    })
+  return new Promise((resolve, reject) => {
+    const recs = context.db.collection('recs');
+    let query = {"rec.site": "m:"};
+    if(args.siteRef) {
+      query["site_ref"] = args.siteRef;
+    }
+    recs.find(query).toArray().then((array) => {
+      let sites = [];
+      array.map( (s) => {
+        const datetime = removePrefix(s.rec['datetime']);
+        const step = removePrefix(s.rec['step']);
+        let site = {
+          name: removePrefix(s.rec.dis),
+          siteRef: removePrefix(s.rec.siteRef),
+          simStatus: removePrefix(s.rec.simStatus),
+          simType: removePrefix(s.rec.simType),
+          datetime,
+          step
+        };
+        sites.push(site);
+      });
+      resolve(sites)
+    }).catch((err) => {
+      reject(err);
+    });
   });
 }
 
@@ -318,7 +185,6 @@ function writePointResolver(context,siteRef, pointName, value, level) {
 }
 
 module.exports = { 
-  runSimResolver, 
   addSiteResolver, 
   sitesResolver, 
   runSiteResolver, 

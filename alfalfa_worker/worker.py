@@ -44,51 +44,6 @@ class Worker:
         self.worker_logger = WorkerLogger()
         os.chdir('alfalfa_worker')
 
-    def tag(self, message_body):
-        """
-        Caller to add "tags" for a given simulation.
-
-        :param message_body: Body of a single message from a boto3 Queue resource
-        :type message_body: dict
-        :return:
-        """
-        file_name = message_body.get('osm_name')  # TODO: change message body to file_name (for fmu)
-        upload_id = message_body.get('upload_id')
-
-        self.worker_logger.logger.info('Add site for file_name: %s, and upload_id: %s' % (file_name, upload_id))
-        subprocess.call(['python3', 'add_site/add_site.py', file_name, upload_id])
-
-    def sim(self, message_body):
-        """
-        Caller to step through a simulation.
-
-        :param message_body: Body of a single message from a boto3 Queue resource
-        :type message_body: dict
-        :return:
-        """
-
-         # {
-         #   "id":"6af449c0-b5a4-11ea-8a5f-39548ad0e434",
-         #   "op":"InvokeAction",
-         #   "action":"runSite",
-         #   "timescale":"5",
-         #   "startDatetime":"0",
-         #   "endDatetime":"86400",
-         #   "realtime":"false",
-         #   "externalClock":"false"
-         # }
-        site_id = message_body.get('id')
-        site_rec = self.ac.mongo_db_recs.find_one({"_id": site_id})
-        sim_type = site_rec.get("rec", {}).get("sim_type", "fmu").replace("s:", "")
-
-        start_datetime = message_body.get('startDatetime')
-        end_datetime = message_body.get('endDatetime')
-        realtime = message_body.get('realtime')
-        timescale = message_body.get('timescale')
-        external_clock = message_body.get('externalClock')
-
-        subprocess.call(['python', 'step_sim/step_fmu.py', '--step_sim_value', timescale, site_id, start_datetime, end_datetime])
-
     def process_message(self, message):
         """
         Process a single message from Queue.  Depending on operation requested, will call one of:
@@ -108,13 +63,6 @@ class Worker:
                 subprocess.call(['python', 'step_sim/step_fmu.py', json.dumps(message_body)])
             elif action == 'addSite':
                 subprocess.call(['python3', 'add_site/add_site.py', json.dumps(message_body)])
-
-        #file_name = message_body.get('osm_name')  # TODO: change message body to file_name (for fmu)
-        #upload_id = message_body.get('upload_id')
-
-        #self.worker_logger.logger.info('Add site for file_name: %s, and upload_id: %s' % (file_name, upload_id))
-        #subprocess.call(['python3', 'add_site/add_site.py', file_name, upload_id])
-                #self.tag(message_body)
 
     def run(self):
         """

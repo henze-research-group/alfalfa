@@ -103,7 +103,6 @@ def get_config():
     return c"""
 
         config_code = config_code.format(fmupath)
-        print(config_code)
         exec config_code in config_module.__dict__
 
         # initiate the testcase
@@ -172,6 +171,7 @@ def get_config():
                 if self.db_stop_set():
                     break
                 self.step()
+                print(self.tc.get_forecast())
                 # TODO: Make this respect time scale provided by user
                 time.sleep(5)
 
@@ -259,7 +259,7 @@ def get_config():
 
 if __name__ == "__main__":
     body = json.loads(sys.argv[1])
-    site_ref = body.get('id')
+    site_ref = body.get('siteRef')
     real_time_flag = bool(body.get('realtime'))
     time_scale = float(body.get('timescale'))
     startTime = float(body.get('startDatetime'))
