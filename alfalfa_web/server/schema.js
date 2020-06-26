@@ -67,6 +67,21 @@ var pointType = new GraphQLObjectType({
   })
 });
 
+var forecastType = new GraphQLObjectType({
+  name: 'Forecast',
+  description: 'A vector of data points for a predicted value',
+  fields: () => ({
+    metric: {
+      type: GraphQLString,
+      description: 'The name of the metric forcasted'
+    },
+    values: {
+      type: new GraphQLList(GraphQLFloat),
+      description: 'A list of the predicted values for the metric being forecast'
+    }
+  })
+});
+
 var siteType = new GraphQLObjectType({
   name: 'Site',
   description: 'A site corresponding to an osm file upload',
@@ -95,7 +110,6 @@ var siteType = new GraphQLObjectType({
       type: GraphQLString,
       description: 'The current simulation step'
     },
-
     points: {
       type: new GraphQLList(pointType),
       description: 'A list of the Haystack points associated with the site',
@@ -105,6 +119,16 @@ var siteType = new GraphQLObjectType({
       },
       resolve: (site,args,context) => {
         return resolvers.sitePointResolver(site.siteRef, args, context);
+      }
+    },
+    forecasts: {
+      type: GraphQLList(forecastType),
+      description: 'A set of forecasts for key metrics',
+      args: {
+        metric: { type: GraphQLString }
+      },
+      resolve: (site,args,context) => {
+        return resolvers.forecastsResolver(site, args, context);
       }
     }
   })

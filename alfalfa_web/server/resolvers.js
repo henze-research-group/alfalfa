@@ -172,6 +172,37 @@ function sitePointResolver(siteRef, args, context) {
   });
 }
 
+function forecastsResolver(site, args, context) {
+  return new Promise((resolve, reject) => {
+
+    const makeForecast = (metric, values) => {
+      return {metric, values};
+    };
+
+    context.redis.hget(site.siteRef, 'forecast', (err, stringdata) => {
+      let forecasts = [];
+
+      if( err ) {
+          resolve(forecasts);
+      }
+
+      const data = JSON.parse(stringdata);
+      if( args.metric ) {
+        const values = data[args.metric];
+        if( values ) {
+          forecasts.push(makeForecast(args.metric, values));
+        }
+      } else {
+        Object.entries(data).forEach(([metric,values]) => {
+          forecasts.push(makeForecast(metric, values));
+        });
+      }
+
+      resolve(forecasts);
+    });
+  });
+}
+
 function advanceResolver(advancer, siteRef) {
   return advancer.advance(siteRef);
 }
@@ -193,6 +224,7 @@ module.exports = {
   sitePointResolver, 
   simsResolver, 
   advanceResolver,
-  writePointResolver 
+  writePointResolver,
+  forecastsResolver
 };
 

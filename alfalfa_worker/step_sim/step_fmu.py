@@ -107,6 +107,7 @@ def get_config():
 
         # initiate the testcase
         self.tc = lib.testcase.TestCase()
+        self.update_forecast(self.tc.get_forecast())
 
         # run the FMU simulation
         self.kstep = 0
@@ -171,7 +172,6 @@ def get_config():
                 if self.db_stop_set():
                     break
                 self.step()
-                print(self.tc.get_forecast())
                 # TODO: Make this respect time scale provided by user
                 time.sleep(5)
 
@@ -199,6 +199,8 @@ def get_config():
         self.mongo_db_recs.update_many({"site_ref": self.site_ref, "rec.cur": "m:"}, {"$unset": {"rec.curVal": "", "rec.curErr": ""}, "$set": {"rec.curStatus": "s:disabled"}}, False)
         self.mongo_db_recs.update_many({"site_ref": self.site_ref, "rec.writable": "m:"}, {"$unset": {"rec.writeLevel": "", "rec.writeVal": ""}, "$set": {"rec.writeStatus": "s:disabled"}}, False)
 
+        self.clear_forecast()
+
         self.sim_id = str(uuid.uuid4())
         tarname = "%s.tar.gz" % self.sim_id
         tar = tarfile.open(tarname, "w:gz")
@@ -215,6 +217,12 @@ def get_config():
         self.mongo_db_sims.insert_one({"_id": self.sim_id, "name": name, "siteRef": self.site_ref, "simStatus": "Complete", "timeCompleted": time, "s3Key": uploadkey, "results": str(kpis)})
 
         shutil.rmtree(self.directory)
+
+    def update_forecast(self, forecast):
+        self.redis.hset(site_ref, 'forecast', json.dumps(forecast))
+
+    def clear_forecast(self):
+        self.redis.hdel(self.site_ref, 'forecast')
 
     def set_idle_state(self):
         self.redis.hset(site_ref, 'control', 'idle')
@@ -256,6 +264,8 @@ def get_config():
                 output_id = self.tagid_and_outputs[key]
                 value_y = y_output[key]
                 self.mongo_db_recs.update_one( {"_id": output_id }, {"$set": {"rec.curVal":"n:%s" %value_y, "rec.curStatus":"s:ok","rec.cur": "m:" }} )        
+
+        self.update_forecast(self.tc.get_forecast())
 
 if __name__ == "__main__":
     body = json.loads(sys.argv[1])

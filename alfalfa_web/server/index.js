@@ -78,6 +78,7 @@ MongoClient.connect(process.env.MONGO_URL).then((mongoClient) => {
           ...request,
           db,
           advancer,
+          redis,
           pub,
           sub
         }
