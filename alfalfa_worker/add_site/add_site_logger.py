@@ -10,7 +10,7 @@ class AddSiteLogger:
         self.logger = logging.getLogger('add_site')
         self.logger.setLevel(logging.INFO)
         self.formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        self.fh = logging.FileHandler(os.path.join('/alfalfa/alfalfa_worker/add_site', 'add_site_logger.log'))
+        self.fh = logging.FileHandler('add_site_logger.log')
         self.fh.setLevel(logging.INFO)
         self.fh.setFormatter(self.formatter)
         self.logger.addHandler(self.fh)

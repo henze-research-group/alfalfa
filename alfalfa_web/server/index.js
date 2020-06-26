@@ -105,7 +105,7 @@ MongoClient.connect(process.env.MONGO_URL).then((mongoClient) => {
         throw err;
       } else {
         if ( process.env.S3_URL.indexOf("amazonaws") == -1 ) {
-          if (req.hostname.indexOf("alfalfa_web") == -1 ) {
+          if (req.hostname.indexOf("web") == -1 ) {
             const url = 'http://' + req.hostname + ':9000/' + process.env.S3_BUCKET;
             data.url = url;
           } else {

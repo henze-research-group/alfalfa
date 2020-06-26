@@ -1,9 +1,9 @@
 FROM michaelwetter/ubuntu-1804_jmodelica_trunk
 
 USER root
-ENV HOME /home/alfalfa
+ENV HOME /home/boptest
 
-WORKDIR /alfalfa
+WORKDIR /
 
 RUN apt-get update -y && apt-get install -y \
     ca-certificates curl libglu1 libjpeg8 libfreetype6 libxi6 libdbus-glib-1-2 libfontconfig1 libsm6 gdebi-core python3.5 python3-pip \
@@ -20,18 +20,16 @@ RUN apt-get update \
 RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py \
   && python3 get-pip.py
 
-COPY alfalfa_worker/requirements/production.txt /alfalfa/
-RUN  python3 -m pip install --ignore-installed -r /alfalfa/production.txt
-RUN  python -m pip install --ignore-installed -r /alfalfa/production.txt
+COPY requirements/production.txt /boptest/
+RUN  python3 -m pip install --ignore-installed -r /boptest/production.txt
+RUN  python -m pip install --ignore-installed -r /boptest/production.txt
 
-COPY . /alfalfa
-COPY ./deploy/wait-for-it.sh /usr/local/wait-for-it.sh
-COPY ./deploy/start_worker.sh start_worker.sh
-
-WORKDIR /alfalfa
-RUN pip3 install .
-
-WORKDIR /alfalfa/alfalfa_worker
+COPY . /boptest/
+#
+#WORKDIR /boptest
+#RUN pip3 install .
+#
+#WORKDIR /boptest/
 
 ENV ROOT_DIR /usr/local
 ENV JMODELICA_HOME $ROOT_DIR/JModelica
@@ -41,5 +39,5 @@ ENV SEPARATE_PROCESS_JVM /usr/lib/jvm/java-8-openjdk-amd64/
 ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64/
 ENV PYTHONPATH $PYTHONPATH:$JMODELICA_HOME/Python:$JMODELICA_HOME/Python/pymodelica
 
-CMD [ "/alfalfa/start_worker.sh" ]
+CMD [ "python3", "-m", "boptest" ]
 

@@ -9,6 +9,7 @@ from pyfmi import load_fmu
 fmupath = sys.argv[1]
 fmu_upload_name = sys.argv[2]
 jsonpath = sys.argv[3]
+
 fmu = load_fmu(fmupath)
 
 # 2.0 get input/output variables from the FMU
@@ -71,3 +72,4 @@ for var_output in output_names:
 # 6.0 write tags to the json file
 with open(jsonpath, 'w') as outfile:
     json.dump(tags, outfile)
+

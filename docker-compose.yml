@@ -4,8 +4,7 @@ services:
     build:
       # the purpose of context one level above dockerfile
       # is to utilize shared code, specifically in db
-      dockerfile: alfalfa_web/Dockerfile
-      context: .
+      context: alfalfa_web
       args:
         - NODE_ENV
     image: ${WEB_REGISTRY_URI}:latest
@@ -62,10 +61,7 @@ services:
       - minio
   worker:
     build:
-      # the purpose of context one level above is to install the entire alfalfa package
-      # and to copy the wait-for-it.sh file in deploy
-      dockerfile: alfalfa_worker/Dockerfile
-      context: .
+      context: alfalfa_worker
     image: ${WORKER_REGISTRY_URI}:latest
     environment:
       - AWS_ACCESS_KEY_ID
@@ -88,13 +84,6 @@ services:
     image: mongo
     ports:
       - "27017:27017"
-  #client-test:
-  #  build:
-  #    context: client
-  #    # Dockerfile is missing
-  #    dockerfile: client/Dockerfile-test
-  #  depends_on:
-  #    - alfalfa_web
   redis:
     image: redis
     ports:
@@ -103,3 +92,4 @@ services:
 #    build: tests
 #    depends_on:
 #      - web
+#

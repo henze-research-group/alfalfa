@@ -31,10 +31,8 @@ import os
 import subprocess
 import sys
 from datetime import datetime
-
-from alfalfa_worker.lib.alfalfa_connections import AlfalfaConnections
-from alfalfa_worker.worker_logger import WorkerLogger
-
+from boptest.lib.alfalfa_connections import AlfalfaConnections
+from boptest.worker_logger import WorkerLogger
 
 class Worker:
     """The Alfalfa alfalfa_worker class.  Used for processing messages from the boto3 SQS Queue resource"""
@@ -42,7 +40,7 @@ class Worker:
     def __init__(self):
         self.ac = AlfalfaConnections()
         self.worker_logger = WorkerLogger()
-        os.chdir('alfalfa_worker')
+        os.chdir('/')
 
     def process_message(self, message):
         """
@@ -60,9 +58,9 @@ class Worker:
             action = message_body.get('action')
             if action == 'runSite':
                 # The version of pyfmi that is installed needs python 2.x, not 3.x
-                subprocess.call(['python', 'step_sim/step_fmu.py', json.dumps(message_body)])
+                subprocess.call(['python', '/boptest/step_sim/step_fmu.py', json.dumps(message_body)])
             elif action == 'addSite':
-                subprocess.call(['python3', 'add_site/add_site.py', json.dumps(message_body)])
+                subprocess.call(['python3', '/boptest/add_site/add_site.py', json.dumps(message_body)])
 
     def run(self):
         """

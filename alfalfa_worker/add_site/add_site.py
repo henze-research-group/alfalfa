@@ -10,9 +10,9 @@ from subprocess import call
 import json
 
 # Local
-from alfalfa_worker.add_site.add_site_logger import AddSiteLogger
-from alfalfa_worker.lib import make_ids_unique, replace_site_id
-from alfalfa_worker.lib.alfalfa_connections import AlfalfaConnections
+from boptest.add_site.add_site_logger import AddSiteLogger
+from boptest.lib import make_ids_unique, replace_site_id
+from boptest.lib.alfalfa_connections import AlfalfaConnections
 
 class AddSite:
     """A wrapper class around adding sites"""
@@ -138,7 +138,7 @@ class AddSite:
         self.ac.s3_bucket.download_file(self.key, self.fmu_path)
 
         # External call to python2 to create FMU tags
-        call(['python', 'lib/fmu_create_tags.py', self.fmu_path, self.file_name, self.fmu_json])
+        call(['python', '/boptest/lib/fmu_create_tags.py', self.fmu_path, self.file_name, self.fmu_json])
 
         self.add_to_mongo_and_filestore()
 

@@ -41,8 +41,8 @@ import imp
 config_module = imp.new_module('config')
 sys.modules['config'] = config_module 
 
-import lib
-import lib.testcase
+import boptest.lib
+import boptest.lib.testcase
 
 class RunFMUSite:
     def __init__(self, **kwargs):
@@ -109,7 +109,7 @@ def get_config():
         exec config_code in config_module.__dict__
 
         # initiate the testcase
-        self.tc = lib.testcase.TestCase()
+        self.tc = boptest.lib.testcase.TestCase()
         self.update_forecast(self.tc.get_forecast())
 
         # run the FMU simulation
