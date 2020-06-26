@@ -45,7 +45,7 @@ class Advancer {
           response[siteref] = { "status": success, "message": message };
           pending = pending - 1;
           if (pending == 0) {
-            resolve(response);
+            resolve(JSON.stringify(response));
           }
         };
 
@@ -62,17 +62,21 @@ class Advancer {
           // Check if the simulation has gone back to idle
           let intervalCounts = 0;
           interval = setInterval(() => {
-            const control = this.redis.hget(siteref, 'control');
-            if (control == 'idle') {
-              // If the control state is idle, then assume the step has been made
-              // and reslve the advance promise, this might happen if we miss the notification for some reason
-              finalize(true, 'success');
-            } else {
-              intervalCounts += 1;
-            }
-            if (intervalCounts > 4) {
-              finalize(false, 'no simulation reply');
-            }
+            const control = this.redis.hget(siteref, 'control', (err, control) => {
+              if (err) {
+                finalize(false, 'no simulation reply');
+              }
+              if (control == 'idle') {
+                // If the control state is idle, then assume the step has been made
+                // and reslve the advance promise, this might happen if we miss the notification for some reason
+                finalize(true, 'success');
+              } else {
+                intervalCounts += 1;
+              }
+              if (intervalCounts > 4) {
+                finalize(false, 'no simulation reply');
+              }
+            });
           }, 500);
         };
 

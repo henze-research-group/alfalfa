@@ -66,6 +66,8 @@ class RunFMUSite:
         self.endTime = kwargs['endTime']
         self.externalClock = kwargs['externalClock']
 
+        print('externalClock: %s' % self.externalClock)
+
         self.site = self.mongo_db_recs.find_one({"_id": self.site_ref})
 
         # build the path for zipped-file, fmu, json
@@ -100,7 +102,8 @@ def get_config():
     c['step'] = 60
     c['horizon'] = 86400
     c['interval'] = 3600
-    return c"""
+    return c
+"""
 
         config_code = config_code.format(fmupath)
         exec config_code in config_module.__dict__
@@ -274,7 +277,7 @@ if __name__ == "__main__":
     time_scale = float(body.get('timescale'))
     startTime = float(body.get('startDatetime'))
     endTime = float(body.get('endDatetime'))
-    externalClock = (body.get('externalClock') == 'true')
+    externalClock = body.get('externalClock')
 
     runFMUSite = RunFMUSite(site_ref=site_ref, real_time_flag=real_time_flag, time_scale=time_scale, startTime=startTime, endTime=endTime, externalClock=externalClock)
     runFMUSite.run()
