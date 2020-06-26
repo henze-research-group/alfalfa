@@ -31,8 +31,8 @@ import os
 import subprocess
 import sys
 from datetime import datetime
-from boptest.lib.alfalfa_connections import AlfalfaConnections
-from boptest.worker_logger import WorkerLogger
+from .lib.alfalfa_connections import AlfalfaConnections
+from .worker_logger import WorkerLogger
 
 class Worker:
     """The Alfalfa alfalfa_worker class.  Used for processing messages from the boto3 SQS Queue resource"""
@@ -40,7 +40,6 @@ class Worker:
     def __init__(self):
         self.ac = AlfalfaConnections()
         self.worker_logger = WorkerLogger()
-        os.chdir('/')
 
     def process_message(self, message):
         """

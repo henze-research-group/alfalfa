@@ -4,7 +4,7 @@ services:
     build:
       # the purpose of context one level above dockerfile
       # is to utilize shared code, specifically in db
-      context: alfalfa_web
+      context: web
       args:
         - NODE_ENV
     image: ${WEB_REGISTRY_URI}:latest
@@ -61,7 +61,7 @@ services:
       - minio
   worker:
     build:
-      context: alfalfa_worker
+      context: worker
     image: ${WORKER_REGISTRY_URI}:latest
     environment:
       - AWS_ACCESS_KEY_ID

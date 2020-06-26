@@ -1,7 +1,7 @@
 print("Starting Alfalfa Worker")
 
 import sys
-from boptest.worker import Worker
+from .worker import Worker
 
 if __name__ == '__main__':
     worker = Worker()
