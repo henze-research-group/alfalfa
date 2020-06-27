@@ -83,7 +83,7 @@ module.exports = {
     app: ["./app.js"]
   },
   output: {
-    path: path.join(__dirname, 'build/app'),
+    path: path.join(__dirname, 'build'),
     filename: 'app.bundle.js',
   },
   devtool: devtool,
