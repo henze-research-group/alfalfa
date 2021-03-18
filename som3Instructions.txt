@@ -31,3 +31,9 @@ In a new terminal:
 ''
 python simExternalRBC_parallel.py
 ''
+
+#Parallel workers
+
+sudo docker-compose up web --scale worker=5
+
+python simExternalRBC_parallel.py
