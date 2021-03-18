@@ -1,0 +1,33 @@
+#Start the Alfalfa framework
+
+''
+sudo docker compose-up web
+''
+
+#Copy the MBL resources
+
+In a new terminal:
+
+''
+sudo docker exec -it alfalfa_worker_1 /bin/bash
+''
+
+then
+
+''
+mkdir /home/developer/git
+''
+
+In a new terminal:
+
+''
+cd <alfalfa_root>
+sudo docker cp files/modelica-buildings/ alfalfa_worker_1:/home/developer/git/
+''
+
+#Start the testcase
+
+In a new terminal:
+''
+python simExternalRBC_parallel.py
+''
